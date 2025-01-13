@@ -11,8 +11,6 @@
 # Maintainers:
 # Currently maintained by the authors.
 #
-# This file has been created at the Institute of
-# Landscape Systems Analysis at the ZALF.
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 # from datetime import date, timedelta
@@ -26,26 +24,17 @@ from pathlib import Path
 import sys
 # import time
 import uuid
-
-PATH_TO_REPO = Path(os.path.realpath(__file__)).parent.parent.parent.parent.parent
-if str(PATH_TO_REPO) not in sys.path:
-    sys.path.insert(1, str(PATH_TO_REPO))
-
-PATH_TO_PYTHON_CODE = PATH_TO_REPO / "src/python"
-if str(PATH_TO_PYTHON_CODE) not in sys.path:
-    sys.path.insert(1, str(PATH_TO_PYTHON_CODE))
-
-from pkgs.common import common
-from pkgs.common import service as serv
-
-PATH_TO_CAPNP_SCHEMAS = PATH_TO_REPO / "capnproto_schemas"
-abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
-reg_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports)
-crop_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "crop.capnp"), imports=abs_imports)
-common_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "common.capnp"), imports=abs_imports)
-monica_params_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "model" / "monica" / "monica_params.capnp"),
-                                 imports=abs_imports)
-storage_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "storage.capnp"), imports=abs_imports)
+from zalfmas_common import common
+from zalfmas_common import service as serv
+import zalfmas_capnp_schemas
+capnp_path = Path(os.path.dirname(zalfmas_capnp_schemas.__file__))
+sys.path.append(str(capnp_path))
+import registry_capnp as reg_capnp
+import crop_capnp
+import common_capnp
+import storage_capnp
+sys.path.append(str(capnp_path / "model" / "monica"))
+import monica_params_capnp
 
 
 LAST_SERVICE_SR_KEY_NAME = "last_service_sr"
@@ -69,7 +58,7 @@ class Crop(crop_capnp.Crop.Server):
         self._species_info = species_info
         self._cultivar_info = cult_info
 
-    def info_context(self, context):  # -> Common.IdInformation;
+    async def info_context(self, context):  # -> Common.IdInformation;
         r = context.results
         r.id = self._id
         cps = self.params.cropParams.cultivarParams
@@ -248,10 +237,10 @@ class Crop(crop_capnp.Crop.Server):
 
         return rp
 
-    def species_context(self, context):  # species     @2 () -> (info :Common.IdInformation);
+    async def species_context(self, context):  # species     @2 () -> (info :Common.IdInformation);
         context.results.info = self._species_info
 
-    def cultivar_context(self, context):  # cultivar    @1 () -> (info :Common.IdInformation);
+    async def cultivar_context(self, context):  # cultivar    @1 () -> (info :Common.IdInformation);
         context.results.info = self._cultivar_info
 
     @property
@@ -277,7 +266,7 @@ class Crop(crop_capnp.Crop.Server):
 
         return self._params
 
-    def parameters(self, **kwargs):  # parameters @0 () -> (params :AnyPointer);
+    async def parameters(self, **kwargs):  # parameters @0 () -> (params :AnyPointer);
         return self.params
 
 
@@ -313,31 +302,31 @@ class Registry(reg_capnp.Registry.Server):
                         entry.ref = crop
                         self._species_to_cultivars[species_name].append(entry)
 
-    def info_context(self, context):  # -> Common.IdInformation;
+    async def info_context(self, context):  # -> Common.IdInformation;
         r = context.results
         r.id = self._id
         r.name = self._name
         r.description = self._description
 
-    def supportedCategories(self, **kwargs):  # supportedCategories @0 () -> (cats :List(Common.IdInformation));
+    async def supportedCategories(self, **kwargs):  # supportedCategories @0 () -> (cats :List(Common.IdInformation));
         species_names = self._species_to_cultivars.keys()
         species_names.sort()
         return list([{"id": name, "name": name} for name in species_names])
 
-    def categoryInfo_context(self, context):  # categoryInfo @1 (categoryId :Text) -> Common.IdInformation;
+    async def categoryInfo_context(self, context):  # categoryInfo @1 (categoryId :Text) -> Common.IdInformation;
         cat_id = context.params.categoryId
         if cat_id in self._species_to_cultivars:
             return {"id": cat_id, "name": cat_id}
 
-    def entries(self, categoryId, **kwargs):  # entries @2 (categoryId :Text) -> (entries :List(Entry));
+    async def entries(self, categoryId, **kwargs):  # entries @2 (categoryId :Text) -> (entries :List(Entry));
         if categoryId in self._species_to_cultivars:
             return self._species_to_cultivars[categoryId]
         elif categoryId is None or len(categoryId) == 0:
             return list(itertools.chain(*self._species_to_cultivars.values()))
 
 
-async def main(path_to_monica_parameters, serve_bootstrap=True, host=None, port=None,
-               id=None, name="MONICA Crop Parameters Service", description=None, use_async=False):
+async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, port=None,
+               id=None, name="MONICA Crop Parameters Service", description=None, srt=None):
     config = {
         "path_to_monica_parameters": path_to_monica_parameters,
         "port": port,
@@ -346,11 +335,11 @@ async def main(path_to_monica_parameters, serve_bootstrap=True, host=None, port=
         "name": name,
         "description": description,
         "serve_bootstrap": serve_bootstrap,
-        "use_async": use_async,
         "restorer_container_sr": None,
         # "capnp://jXS22bpAGSjfksa0JkDI_092-h-bdZi4lKNBBgD7kWk=@10.10.24.218:40305/ZGVjODYxYWQtZmVkOS00YjEzLWJmNjQtNWU0OGRmYzhhYmZh",
         "service_container_sr": None,
         # "capnp://jXS22bpAGSjfksa0JkDI_092-h-bdZi4lKNBBgD7kWk=@10.10.24.218:40305/ZGVjODYxYWQtZmVkOS00YjEzLWJmNjQtNWU0OGRmYzhhYmZh"
+        "srt": srt
     }
     common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
 
@@ -391,18 +380,11 @@ async def main(path_to_monica_parameters, serve_bootstrap=True, host=None, port=
                                          store_sturdy_refs=False).wait()
             return save_res["sturdy_ref"]
 
-    if config["use_async"]:
-        await serv.async_init_and_run_service(name_to_service, config["host"], config["port"],
-                                              serve_bootstrap=config["serve_bootstrap"], restorer=restorer,
-                                              restorer_container_sr=config["restorer_container_sr"],
-                                              service_container_sr=config["service_container_sr"])
-    else:
-        serv.init_and_run_service(name_to_service, config["host"], config["port"],
-                                  serve_bootstrap=config["serve_bootstrap"], restorer=restorer,
-                                  restorer_container_sr=config["restorer_container_sr"],
-                                  service_container_sr=config["service_container_sr"],
-                                  load_last_or_store_services_callback=load_last_or_store_services)
-
+    await serv.init_and_run_service(name_to_service, config["host"], config["port"],
+                                    serve_bootstrap=config["serve_bootstrap"], restorer=restorer,
+                                    name_to_service_srs={"service": config["srt"]},
+                                    restorer_container_sr=config["restorer_container_sr"],
+                                    service_container_sr=config["service_container_sr"])
 
 if __name__ == '__main__':
-    asyncio.run(main(str(PATH_TO_REPO.parent / "monica-parameters"), serve_bootstrap=True, use_async=True))
+    asyncio.run(capnp.run(main(serve_bootstrap=True)))
