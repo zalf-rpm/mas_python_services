@@ -13,7 +13,6 @@
 #
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
-# from datetime import date, timedelta
 import asyncio
 import capnp
 from collections import defaultdict
@@ -22,7 +21,6 @@ import json
 import os
 from pathlib import Path
 import sys
-# import time
 import uuid
 from zalfmas_common import common
 from zalfmas_common import service as serv
@@ -36,12 +34,10 @@ import storage_capnp
 sys.path.append(str(capnp_path / "model" / "monica"))
 import monica_params_capnp
 
-
 LAST_SERVICE_SR_KEY_NAME = "last_service_sr"
 LAST_ADMIN_SR_KEY_NAME = "last_admin_sr"
 SERVICE_ITSELF_RESTORE_TOKEN = "monica_crop_service_itself"
 ADMIN_RESTORE_TOKEN = "monica_crop_service_admin"
-
 
 class Crop(crop_capnp.Crop.Server):
 
@@ -65,7 +61,8 @@ class Crop(crop_capnp.Crop.Server):
         r.name = self._name if not cps else cps.cultivarId
         r.description = self._description if not cps else cps.description
 
-    def get_value(self, val_or_arr, expected_val_dim=0):
+    @staticmethod
+    def get_value(val_or_arr, expected_val_dim=0):
 
         def get_dim_of_first_value(arr):
             return 1 + (get_dim_of_first_value(arr[0]) if len(arr) > 0 else 0) if type(arr) is list else 0
@@ -261,8 +258,8 @@ class Crop(crop_capnp.Crop.Server):
                 j = json.load(_)
                 self._params.residueParams = self.create_residue_params(j)
 
-            if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
-                self._entry_ref.name = cps.cultivarParams.cultivarId
+            #if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
+            #    self._entry_ref.name = cps.cultivarParams.cultivarId
 
         return self._params
 
@@ -270,7 +267,7 @@ class Crop(crop_capnp.Crop.Server):
         return self.params
 
 
-class Registry(reg_capnp.Registry.Server):
+class Service(crop_capnp.Service.Server):
 
     def __init__(self, path_to_monica_parameters, id=None, name=None, description=None):
         self._id = id if id else str(uuid.uuid4())
@@ -344,7 +341,7 @@ async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, 
     common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
 
     restorer = common.Restorer()
-    service = Registry(config["path_to_monica_parameters"],
+    service = Service(config["path_to_monica_parameters"],
                        id=config["id"], name=config["name"], description=config["description"])
 
     name_to_service = {"service": service}
@@ -359,7 +356,7 @@ async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, 
 
     restorer.restore_callback = restore_callback
 
-    def load_last_or_store_services(service_container, name, service):
+    async def load_last_or_store_services(service_container, name, service):
         (storage_key, restore_token) = {
             "service": (LAST_SERVICE_SR_KEY_NAME, SERVICE_ITSELF_RESTORE_TOKEN),
             "admin": (LAST_ADMIN_SR_KEY_NAME, ADMIN_RESTORE_TOKEN)
@@ -367,8 +364,8 @@ async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, 
         entry_prom = service_container.getEntry(key=storage_key).entry
         entry_val = entry_prom.getValue().wait()
         if entry_val.isUnset:  # there was no set last token, so we need to create a new one
-            save_res = restorer.save_str(service, create_unsave=False, restore_token=restore_token,
-                                         store_sturdy_refs=True).wait()
+            save_res = await restorer.save_str(service, create_unsave=False, restore_token=restore_token,
+                                         store_sturdy_refs=True)
             service_sr = save_res["sturdy_ref"]
             # keep the sturdy ref around for output to the user
             # and save the actual token as the one we used
@@ -376,15 +373,15 @@ async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, 
                 return service_sr
         else:  # there was a previously stored token, so just create a sturdy ref for output from it
             service_sr_token = entry_val.value.textValue
-            save_res = restorer.save_str(service, fixed_sr_token=service_sr_token, create_unsave=False,
-                                         store_sturdy_refs=False).wait()
+            save_res = await restorer.save_str(service, fixed_sr_token=service_sr_token, create_unsave=False,
+                                         store_sturdy_refs=False)
             return save_res["sturdy_ref"]
 
     await serv.init_and_run_service(name_to_service, config["host"], config["port"],
                                     serve_bootstrap=config["serve_bootstrap"], restorer=restorer,
                                     name_to_service_srs={"service": config["srt"]},
-                                    restorer_container_sr=config["restorer_container_sr"],
-                                    service_container_sr=config["service_container_sr"])
+                                    restorer_container_sr=config["restorer_container_sr"])#,
+                                    #service_container_sr=config["service_container_sr"])
 
 if __name__ == '__main__':
     asyncio.run(capnp.run(main(serve_bootstrap=True)))
