@@ -29,8 +29,8 @@ capnp_path = Path(os.path.dirname(zalfmas_capnp_schemas.__file__))
 sys.path.append(str(capnp_path))
 import registry_capnp as reg_capnp
 import crop_capnp
-import common_capnp
-import storage_capnp
+#import common_capnp
+#import storage_capnp
 sys.path.append(str(capnp_path / "model" / "monica"))
 import monica_params_capnp
 
@@ -258,8 +258,8 @@ class Crop(crop_capnp.Crop.Server):
                 j = json.load(_)
                 self._params.residueParams = self.create_residue_params(j)
 
-            #if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
-            #    self._entry_ref.name = cps.cultivarParams.cultivarId
+            if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
+                self._entry_ref.name = cps.cultivarParams.cultivarId
 
         return self._params
 
