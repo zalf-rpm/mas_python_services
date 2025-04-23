@@ -77,7 +77,7 @@ class Crop(crop_capnp.Crop.Server):
         sp = monica_params_capnp.SpeciesParameters.new_message()
 
         sp.speciesId = self.get_value(j.get("SpeciesName", ""))
-        sp.carboxylationPathway = self.get_value(j.get("CarboxylationPathway", 0))
+        sp.carboxylationPathway = int(self.get_value(j.get("CarboxylationPathway", 0)))
         sp.defaultRadiationUseEfficiency = self.get_value(j.get("DefaultRadiationUseEfficiency", 0))
         sp.partBiologicalNFixation = self.get_value(j.get("PartBiologicalNFixation", 0))
         sp.initialKcFactor = self.get_value(j.get("InitialKcFactor", 0))
@@ -93,7 +93,7 @@ class Crop(crop_capnp.Crop.Server):
         sp.nConcentrationB0 = self.get_value(j.get("NConcentrationB0", 0))
         sp.nConcentrationPN = self.get_value(j.get("NConcentrationPN", 0))
         sp.nConcentrationRoot = self.get_value(j.get("NConcentrationRoot", 0))
-        sp.developmentAccelerationByNitrogenStress = self.get_value(j.get("DevelopmentAccelerationByNitrogenStress", 0))
+        sp.developmentAccelerationByNitrogenStress = int(self.get_value(j.get("DevelopmentAccelerationByNitrogenStress", 0)))
         sp.fieldConditionModifier = self.get_value(j.get("FieldConditionModifier", 1))
         sp.assimilateReallocation = self.get_value(j.get("AssimilateReallocation", 0))
 
@@ -113,16 +113,16 @@ class Crop(crop_capnp.Crop.Server):
         sp.targetN30 = self.get_value(j.get("TargetN30", 0))
         sp.maxNUptakeParam = self.get_value(j.get("MaxNUptakeParam", 0))
         sp.rootDistributionParam = self.get_value(j.get("RootDistributionParam", 0))
-        sp.plantDensity = self.get_value(j.get("PlantDensity", 0))
+        sp.plantDensity = int(self.get_value(j.get("PlantDensity", 0)))
         sp.rootGrowthLag = self.get_value(j.get("RootGrowthLag", 0))
         sp.minimumTemperatureRootGrowth = self.get_value(j.get("MinimumTemperatureRootGrowth", 0))
         sp.initialRootingDepth = self.get_value(j.get("InitialRootingDepth", 0))
         sp.rootPenetrationRate = self.get_value(j.get("RootPenetrationRate", 0))
         sp.rootFormFactor = self.get_value(j.get("RootFormFactor", 0))
         sp.specificRootLength = self.get_value(j.get("SpecificRootLength", 0))
-        sp.stageAfterCut = self.get_value(j.get("StageAfterCut", 0))
+        sp.stageAfterCut = int(self.get_value(j.get("StageAfterCut", 0)))
         sp.limitingTemperatureHeatStress = self.get_value(j.get("LimitingTemperatureHeatStress", 0))
-        sp.cuttingDelayDays = self.get_value(j.get("CuttingDelayDays", 0))
+        sp.cuttingDelayDays = int(self.get_value(j.get("CuttingDelayDays", 0)))
         sp.droughtImpactOnFertilityFactor = self.get_value(j.get("DroughtImpactOnFertilityFactor", 0))
 
         sp.efMono = self.get_value(j.get("EF_MONO", 0.5))
@@ -135,7 +135,7 @@ class Crop(crop_capnp.Crop.Server):
         sp.kc25 = self.get_value(j.get("KC25", 460))
         sp.ko25 = self.get_value(j.get("KO25", 330))
 
-        sp.transitionStageLeafExp = self.get_value(j.get("TransitionStageLeafExp", -1))
+        sp.transitionStageLeafExp = int(self.get_value(j.get("TransitionStageLeafExp", -1)))
 
         return sp
 
@@ -178,7 +178,7 @@ class Crop(crop_capnp.Crop.Server):
         cp.frostDehardening = self.get_value(j.get("FrostDehardening", 0))
         cp.lowTemperatureExposure = self.get_value(j.get("LowTemperatureExposure", 0))
         cp.respiratoryStress = self.get_value(j.get("RespiratoryStress", 0))
-        cp.latestHarvestDoy = self.get_value(j.get("LatestHarvestDoy", -1))
+        cp.latestHarvestDoy = int(self.get_value(j.get("LatestHarvestDoy", -1)))
 
         cp.organIdsForPrimaryYield = [
             {
