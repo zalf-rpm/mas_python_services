@@ -29,8 +29,6 @@ capnp_path = Path(os.path.dirname(zalfmas_capnp_schemas.__file__))
 sys.path.append(str(capnp_path))
 import registry_capnp as reg_capnp
 import crop_capnp
-#import common_capnp
-#import storage_capnp
 sys.path.append(str(capnp_path / "model" / "monica"))
 import monica_params_capnp
 
@@ -41,8 +39,8 @@ ADMIN_RESTORE_TOKEN = "monica_crop_service_admin"
 
 class Crop(crop_capnp.Crop.Server):
 
-    def __init__(self, species_info, species_path, cult_info, cult_path, residue_path, entry_ref, id=None, name=None,
-                 description=None):
+    def __init__(self, species_info, species_path, cult_info, cult_path, residue_path, #entry_ref,
+                 id=None, name=None, description=None):
         self._id = id if id else str(uuid.uuid4())
         self._name = name if name else id
         self._description = description if description else ""
@@ -50,7 +48,7 @@ class Crop(crop_capnp.Crop.Server):
         self._cult_path = cult_path
         self._residue_path = residue_path
         self._params = None
-        self._entry_ref = entry_ref
+        #self._entry_ref = entry_ref
         self._species_info = species_info
         self._cultivar_info = cult_info
 
@@ -258,8 +256,9 @@ class Crop(crop_capnp.Crop.Server):
                 j = json.load(_)
                 self._params.residueParams = self.create_residue_params(j)
 
-            if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
-                self._entry_ref.name = cps.cultivarParams.cultivarId
+            # update name in entry to match the one in the file
+            #if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
+            #    self._entry_ref.name = cps.cultivarParams.cultivarId
 
         return self._params
 
@@ -294,8 +293,8 @@ class Service(crop_capnp.Service.Server):
                             name=cult_name
                         )
                         crop = Crop({"id": species_name, "name": species_name}, str(species_path) + ".json",
-                                    {"id": cult_name, "name": cult_name}, str(cult_path), str(residue_path),
-                                    entry, id=species_name + "_" + cult_name, name=species_name + "/" + cult_name)
+                                    {"id": cult_name, "name": cult_name}, str(cult_path), str(residue_path), #entry,
+                                    id=species_name + "_" + cult_name, name=species_name + "/" + cult_name)
                         entry.ref = crop
                         self._species_to_cultivars[species_name].append(entry)
 
@@ -305,21 +304,23 @@ class Service(crop_capnp.Service.Server):
         r.name = self._name
         r.description = self._description
 
-    async def supportedCategories(self, **kwargs):  # supportedCategories @0 () -> (cats :List(Common.IdInformation));
-        species_names = self._species_to_cultivars.keys()
+    async def supportedCategories_context(self, context):  # supportedCategories @0 () -> (cats :List(Common.IdInformation));
+        species_names = list(self._species_to_cultivars.keys())
         species_names.sort()
-        return list([{"id": name, "name": name} for name in species_names])
+        context.results.cats = list([{"id": name, "name": name} for name in species_names])
 
     async def categoryInfo_context(self, context):  # categoryInfo @1 (categoryId :Text) -> Common.IdInformation;
         cat_id = context.params.categoryId
         if cat_id in self._species_to_cultivars:
-            return {"id": cat_id, "name": cat_id}
+            context.results.id = cat_id
+            context.results.name = cat_id
 
-    async def entries(self, categoryId, **kwargs):  # entries @2 (categoryId :Text) -> (entries :List(Entry));
-        if categoryId in self._species_to_cultivars:
-            return self._species_to_cultivars[categoryId]
-        elif categoryId is None or len(categoryId) == 0:
-            return list(itertools.chain(*self._species_to_cultivars.values()))
+    async def entries_context(self, context):  # entries @2 (categoryId :Text) -> (entries :List(Entry));
+        cat_id = context.params.categoryId
+        if cat_id in self._species_to_cultivars:
+            context.results.entries = self._species_to_cultivars[cat_id]
+        elif cat_id is None or len(cat_id) == 0:
+            context.results.entries = list(itertools.chain(*self._species_to_cultivars.values()))
 
 
 async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, port=None,
