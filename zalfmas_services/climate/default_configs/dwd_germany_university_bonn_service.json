@@ -1,0 +1,26 @@
+{
+    "service": {
+        "id": "45579662-bdf0-49db-9808-860135170794",
+        "name": "DWD/UBN - historical - 1901 - 2023",
+        "description": "No description for service 45579662-bdf0-49db-9808-860135170794",
+        "path_to_data": "/run/user/1000/gvfs/sftp:host=login01.cluster.zalf.de,user=rpm/beegfs/common/data/climate/dwd/csvs/germany_ubn_1951-01-01_to_2024-08-30",
+        "path_to_latlon_to_rowcol": "/run/user/1000/gvfs/sftp:host=login01.cluster.zalf.de,user=rpm/beegfs/common/data/climate/dwd/csvs/latlon-to-rowcol.json",
+        "fixed_sturdy_ref_token": "bonn",
+        "storage_container_sr": "sturdy ref to storage container",
+        "registries": [{
+                "name": "DWD/UBN - historical data - 1951-2023",
+                "category_id": "climate",
+                "sturdy_ref": "capnp://the_host_key@host:port/a_sturdy_ref_token"
+        }]
+    },
+    "vat": {
+        "host": "localhost",
+        "port": 9999,
+        "serve_bootstrap": true,
+        "restorer_container_sr": "sturdy ref to the restorers storage container",
+        "resolvers": [{
+            "sturdy_ref": "capnp://rUh7mOPusPb31PQ25EUHGy4FLeMHKS4gfcGdzfN7cOU@10.10.28.186:40455/7edb23d8-5ec4-4983-9369-d49810664acf",
+            "alias": "bonn"
+        }]
+    }
+}

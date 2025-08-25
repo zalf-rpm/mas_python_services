@@ -69,49 +69,28 @@ def create_meta_plus_datasets(path_to_data_dir, interpolator, rowcol_to_latlon, 
     ))
     return datasets
 
-
-default_config = {
-    "id": str(uuid.uuid4()),
-    "name": "DWD/UBN - historical - 1901 - 2023",
-    "description": None,
-    "path_to_data": "path to data here",
-    "path_to_latlon_to_rowcol": "path to latlon_to_rowcol.json here",
-    "host": None,
-    "port": None,
-    "serve_bootstrap": True,
-    "fixed_sturdy_ref_token": None,
-    "reg_sturdy_ref": None,
-    "reg_category": None,
-
-    "opt:id": "ID of the service",
-    "opt:name": "DWD/UBN - historical - 1901 - 2023",
-    "opt:description": "Description of the service",
-    "opt:path_to_data": "[string (path)] -> Path to the directory containing the data (rows)",
-    "opt:path_to_latlon_to_rowcol": "[string (path)] -> Path to the JSON file containing the lat/lon to row/coll mapping",
-    "opt:host": "[string (IP/hostname)] -> Use this host (e.g. localhost)",
-    "opt:port": "[int] -> Use this port (missing = default = choose random free port)",
-    "opt:serve_bootstrap": "[true | false] -> Is the service reachable directly via its restorer interface",
-    "opt:fixed_sturdy_ref_token": "[string] -> Use this token as the sturdy ref token of this service",
-    "opt:reg_sturdy_ref": "[string (sturdy ref)] -> Connect to registry using this sturdy ref",
-    "opt:reg_category": "[string] -> Connect to registry using this category",
-}
 async def main():
     parser = serv.create_default_args_parser("DWD/UBN - historical")
-    config, args = serv.handle_default_service_args(parser, default_config)
+    config, _ = serv.handle_default_service_args(parser, path_to_service_py=__file__)
 
-    path_to_data = config["path_to_data"]
-    path_to_latlon_to_rowcol = config["path_to_latlon_to_rowcol"]
+    cs = config["service"]
+    cv = config["vat"]
+
+    path_to_data = cs["path_to_data"]
+    path_to_latlon_to_rowcol = cs["path_to_latlon_to_rowcol"]
 
     restorer = common.Restorer()
     interpolator, rowcol_to_latlon = ccdi.create_lat_lon_interpolator_from_json_coords_file(
         os.path.join(path_to_data, path_to_latlon_to_rowcol))
     meta_plus_data = create_meta_plus_datasets(path_to_data, interpolator, rowcol_to_latlon, restorer)
-    service = ccdi.Service(meta_plus_data, id=config["id"], name=config["name"], description=config["description"],
+    service = ccdi.Service(meta_plus_data, id=cs["id"], name=cs["name"], description=cs["description"],
                            restorer=restorer)
     await serv.init_and_run_service({"service": service},
-                                    config["host"], config["port"],
-                                    serve_bootstrap=config["serve_bootstrap"],
-                                    name_to_service_srs={"service": config["fixed_sturdy_ref_token"]},
+                                    cv["host"], cv["port"],
+                                    serve_bootstrap=cv["serve_bootstrap"],
+                                    name_to_service_srs={"service": cs["fixed_sturdy_ref_token"]},
+                                    registries=cs["registries"],
+                                    resolvers=cv["resolvers"],
                                     restorer=restorer)
 
 if __name__ == '__main__':
