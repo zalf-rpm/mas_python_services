@@ -74,8 +74,6 @@ async def main():
     config, _ = serv.handle_default_service_args(parser, path_to_service_py=__file__)
 
     cs = config["service"]
-    cv = config["vat"]
-
     path_to_data = cs["path_to_data"]
     path_to_latlon_to_rowcol = cs["path_to_latlon_to_rowcol"]
 
@@ -83,15 +81,11 @@ async def main():
     interpolator, rowcol_to_latlon = ccdi.create_lat_lon_interpolator_from_json_coords_file(
         os.path.join(path_to_data, path_to_latlon_to_rowcol))
     meta_plus_data = create_meta_plus_datasets(path_to_data, interpolator, rowcol_to_latlon, restorer)
-    service = ccdi.Service(meta_plus_data, id=cs["id"], name=cs["name"], description=cs["description"],
+    service = ccdi.Service(meta_plus_data,
+                           id=cs.get("id", None), name=cs.get("name", None),
+                           description=cs.get("description", None),
                            restorer=restorer)
-    await serv.init_and_run_service({"service": service},
-                                    cv["host"], cv["port"],
-                                    serve_bootstrap=cv["serve_bootstrap"],
-                                    name_to_service_srs={"service": cs["fixed_sturdy_ref_token"]},
-                                    registries=cs["registries"],
-                                    resolvers=cv["resolvers"],
-                                    restorer=restorer)
+    await serv.init_and_run_service_from_config(config=config, service=service, restorer=restorer)
 
 if __name__ == '__main__':
     asyncio.run(capnp.run(main()))
