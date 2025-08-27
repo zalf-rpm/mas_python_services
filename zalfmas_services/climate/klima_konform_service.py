@@ -42,12 +42,15 @@ from pkgs.climate import common_climate_data_capnp_impl as ccdi
 
 PATH_TO_CAPNP_SCHEMAS = PATH_TO_REPO / "capnproto_schemas"
 abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
-reg_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports)
-climate_data_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports)
+reg_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports
+)
+climate_data_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports
+)
 
 
 class TimeSeries(climate_data_capnp.TimeSeries.Server):
-
     def __init__(self, data_t, header, metadata=None, location=None):
         self._data_t = data_t
         self._data = None
@@ -71,27 +74,37 @@ class TimeSeries(climate_data_capnp.TimeSeries.Server):
     def data(self, **kwargs):  # () -> (data :List(List(Float32)));
         if self._data is None:
             no_of_days = len(self._data_t[0]) if len(self._data_t) > 0 else 0
-            self._data = list([list(map(lambda ds: ds[i], self._data_t)) for i in range(no_of_days)])
+            self._data = list(
+                [list(map(lambda ds: ds[i], self._data_t)) for i in range(no_of_days)]
+            )
         return self._data
 
     def dataT(self, **kwargs):  # () -> (data :List(List(Float32)));
         return self._data_t
 
-    def subrange_context(self, context):  # (from :Date, to :Date) -> (timeSeries :TimeSeries);
+    def subrange_context(
+        self, context
+    ):  # (from :Date, to :Date) -> (timeSeries :TimeSeries);
         from_date = ccdi.create_date(getattr(context.params, "from"))
         to_date = ccdi.create_date(context.params.to)
         start_i = (from_date - self._start_date).days
         end_i = (to_date - self._start_date).days
-        sub_data_t = [ds[start_i: end_i + 1] for ds in self._data_t]
-        context.results.timeSeries = TimeSeries(sub_data_t, self._header, metadata=self._meta, location=self._location)
+        sub_data_t = [ds[start_i : end_i + 1] for ds in self._data_t]
+        context.results.timeSeries = TimeSeries(
+            sub_data_t, self._header, metadata=self._meta, location=self._location
+        )
 
-    def subheader(self, elements, **kwargs):  # (elements :List(Element)) -> (timeSeries :TimeSeries);
+    def subheader(
+        self, elements, **kwargs
+    ):  # (elements :List(Element)) -> (timeSeries :TimeSeries);
         sub_header = [str(e) for e in elements]
         sub_data_t = []
         for i, elem in enumerate(self._header):
             if elem in sub_header:
                 sub_data_t.append(self._data_t[i])
-        return TimeSeries(sub_data_t, sub_header, metadata=self._meta, location=self._location)
+        return TimeSeries(
+            sub_data_t, sub_header, metadata=self._meta, location=self._location
+        )
 
     def metadata(self, _context, **kwargs):  # metadata @7 () -> Metadata;
         "the metadata for this time series"
@@ -113,68 +126,148 @@ class TimeSeries(climate_data_capnp.TimeSeries.Server):
 
 
 class DatasetImpl(climate_data_capnp.Dataset.Server):
-
     def __init__(self, path_to_nc_files, region="sn", metadata=None):
-
         self._elem_to_data = {}
         if region == "sn":
             self._elem_to_data = {
-                "tmax": {"var": "tx", "convf": 1.0, "ds": Dataset(path_to_nc_files + "/Temperatur_max.nc")},  # -> °C
-                "tavg": {"var": "tmean", "convf": 1.0, "ds": Dataset(path_to_nc_files + "/Temperatur_mean.nc")},
+                "tmax": {
+                    "var": "tx",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_max.nc"),
+                },  # -> °C
+                "tavg": {
+                    "var": "tmean",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_mean.nc"),
+                },
                 # -> °C
-                "tmin": {"var": "tn", "convf": 1.0, "ds": Dataset(path_to_nc_files + "/Temperatur_min.nc")},  # -> °C
-                "precip": {"var": "p", "convf": 1.0, "ds": Dataset(path_to_nc_files + "/Niederschlag.nc")},  # -> mm
-                "relhumid": {"var": "rh", "convf": 1.0, "ds": Dataset(path_to_nc_files + "/Relative_Feuchte.nc")},
+                "tmin": {
+                    "var": "tn",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_min.nc"),
+                },  # -> °C
+                "precip": {
+                    "var": "p",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Niederschlag.nc"),
+                },  # -> mm
+                "relhumid": {
+                    "var": "rh",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Relative_Feuchte.nc"),
+                },
                 # -> %
-                "globrad": {"var": "gr", "convf": 3.6, "ds": Dataset(path_to_nc_files + "/Globalstrahlung.nc")},
+                "globrad": {
+                    "var": "gr",
+                    "convf": 3.6,
+                    "ds": Dataset(path_to_nc_files + "/Globalstrahlung.nc"),
+                },
                 # -> MJ/m2/d
-                "wind": {"var": "wind", "convf": 1.0, "ds": Dataset(path_to_nc_files + "/Windgeschwindigkeit.nc")}
+                "wind": {
+                    "var": "wind",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Windgeschwindigkeit.nc"),
+                },
                 # -> m/s
             }
         elif region == "sa":
             self._elem_to_data = {
-                "tmax": {"var": "Tagesmaximum_Temperatur", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Temperatur_max.nc")},  # -> °C
-                "tavg": {"var": "Tagesmittel_Temperatur", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Temperatur_mean.nc")},  # -> °C
-                "tmin": {"var": "TagesminimumTemperatur", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Temperatur_min.nc")},  # -> °C
-                "precip": {"var": "Korrigierter_Niederschlag", "convf": 1.0,
-                           "ds": Dataset(path_to_nc_files + "/Niederschlag.nc")},  # -> mm
-                "globrad": {"var": "Globalstrahlung", "convf": 3.6,
-                            "ds": Dataset(path_to_nc_files + "/Globalstrahlung.nc")},  # -> MJ/m2/d
-                "wind": {"var": "Tagesmittel_Windgeschwindigkeit", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Windgeschwindigkeit.nc")},  # -> m/s
-                "airpress": {"var": "Tagesmittel_Luftdruck", "convf": 1.0,
-                             "ds": Dataset(path_to_nc_files + "/Luftdruck.nc")}  # -> hPa
+                "tmax": {
+                    "var": "Tagesmaximum_Temperatur",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_max.nc"),
+                },  # -> °C
+                "tavg": {
+                    "var": "Tagesmittel_Temperatur",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_mean.nc"),
+                },  # -> °C
+                "tmin": {
+                    "var": "TagesminimumTemperatur",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_min.nc"),
+                },  # -> °C
+                "precip": {
+                    "var": "Korrigierter_Niederschlag",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Niederschlag.nc"),
+                },  # -> mm
+                "globrad": {
+                    "var": "Globalstrahlung",
+                    "convf": 3.6,
+                    "ds": Dataset(path_to_nc_files + "/Globalstrahlung.nc"),
+                },  # -> MJ/m2/d
+                "wind": {
+                    "var": "Tagesmittel_Windgeschwindigkeit",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Windgeschwindigkeit.nc"),
+                },  # -> m/s
+                "airpress": {
+                    "var": "Tagesmittel_Luftdruck",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Luftdruck.nc"),
+                },  # -> hPa
             }
         elif region == "tn":
             self._elem_to_data = {
-                "tmax": {"var": "Tagesmaximum_Temperatur", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Temperatur_max.nc")},  # -> °C
-                "tavg": {"var": "Tagesmittel_Temperatur", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Temperatur_mean.nc")},  # -> °C
-                "tmin": {"var": "TagesminimumTemperatur", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Temperatur_min.nc")},  # -> °C
-                "precip": {"var": "Korrigierter_Niederschlag", "convf": 1.0,
-                           "ds": Dataset(path_to_nc_files + "/Niederschlag.nc")},  # -> mm
-                "relhumid": {"var": "Relative_Feuchte", "convf": 1.0,
-                             "ds": Dataset(path_to_nc_files + "/Relative_Feuchte.nc")},  # -> mm
-                "globrad": {"var": "Globalstrahlung", "convf": 3.6,
-                            "ds": Dataset(path_to_nc_files + "/Globalstrahlung.nc")},  # -> MJ/m2/d
-                "wind": {"var": "Tagesmittel_Windgeschwindigkeit", "convf": 1.0,
-                         "ds": Dataset(path_to_nc_files + "/Windgeschwindigkeit.nc")},  # -> m/s
-                "airpress": {"var": "Tagesmittel_Luftdruck", "convf": 1.0,
-                             "ds": Dataset(path_to_nc_files + "/Luftdruck.nc")}  # -> hPa
+                "tmax": {
+                    "var": "Tagesmaximum_Temperatur",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_max.nc"),
+                },  # -> °C
+                "tavg": {
+                    "var": "Tagesmittel_Temperatur",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_mean.nc"),
+                },  # -> °C
+                "tmin": {
+                    "var": "TagesminimumTemperatur",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Temperatur_min.nc"),
+                },  # -> °C
+                "precip": {
+                    "var": "Korrigierter_Niederschlag",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Niederschlag.nc"),
+                },  # -> mm
+                "relhumid": {
+                    "var": "Relative_Feuchte",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Relative_Feuchte.nc"),
+                },  # -> mm
+                "globrad": {
+                    "var": "Globalstrahlung",
+                    "convf": 3.6,
+                    "ds": Dataset(path_to_nc_files + "/Globalstrahlung.nc"),
+                },  # -> MJ/m2/d
+                "wind": {
+                    "var": "Tagesmittel_Windgeschwindigkeit",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Windgeschwindigkeit.nc"),
+                },  # -> m/s
+                "airpress": {
+                    "var": "Tagesmittel_Luftdruck",
+                    "convf": 1.0,
+                    "ds": Dataset(path_to_nc_files + "/Luftdruck.nc"),
+                },  # -> hPa
             }
 
-        no_of_days = self._elem_to_data["tavg"]["ds"]["time"].shape[0] if "tavg" in self._elem_to_data else 0
+        no_of_days = (
+            self._elem_to_data["tavg"]["ds"]["time"].shape[0]
+            if "tavg" in self._elem_to_data
+            else 0
+        )
         self._meta = climate_data_capnp.Metadata.new_message(
             entries=[
                 {"historical": None},
                 {"start": ccdi.create_capnp_date(date(1961, 1, 1))},
-                {"end": ccdi.create_capnp_date(date(1961, 1, 1) + timedelta(days=no_of_days - 1))}
-            ])
+                {
+                    "end": ccdi.create_capnp_date(
+                        date(1961, 1, 1) + timedelta(days=no_of_days - 1)
+                    )
+                },
+            ]
+        )
         self._time_series = {}
         self._locations = {}
         self._all_locations_created = False
@@ -182,12 +275,16 @@ class DatasetImpl(climate_data_capnp.Dataset.Server):
 
         latlon_crs = geo.name_to_crs("latlon")
         gk4_crs = geo.name_to_crs("gk4")
-        self._latlon_to_gk4_transformer = Transformer.from_crs(latlon_crs, gk4_crs, always_xy=True)
-        self._gk4_to_latlon_transformer = Transformer.from_crs(gk4_crs, latlon_crs, always_xy=True)
+        self._latlon_to_gk4_transformer = Transformer.from_crs(
+            latlon_crs, gk4_crs, always_xy=True
+        )
+        self._gk4_to_latlon_transformer = Transformer.from_crs(
+            gk4_crs, latlon_crs, always_xy=True
+        )
         self._interpolator = self.create_interpolator()
 
     def metadata(self, _context, **kwargs):  # metadata @0 () -> Metadata;
-        # get metadata for these data 
+        # get metadata for these data
         r = _context.results
         r.init("entries", len(self._meta.entries))
         for i, e in enumerate(self._meta.entries):
@@ -227,27 +324,42 @@ class DatasetImpl(climate_data_capnp.Dataset.Server):
 
     def time_series_at(self, row, col, location=None):
         if (row, col) not in self._time_series:
-            data_t = list([list(map(float, data["ds"][data["var"]][:, row, col] * data["convf"])) for data in
-                           self._elem_to_data.values()])
+            data_t = list(
+                [
+                    list(
+                        map(float, data["ds"][data["var"]][:, row, col] * data["convf"])
+                    )
+                    for data in self._elem_to_data.values()
+                ]
+            )
 
             if not location:
                 location = self.location_at(row, col)
 
-            timeSeries = TimeSeries(data_t, list(self._elem_to_data.keys()), metadata=self._meta, location=location)
+            timeSeries = TimeSeries(
+                data_t,
+                list(self._elem_to_data.keys()),
+                metadata=self._meta,
+                location=location,
+            )
 
             self._time_series[(row, col)] = timeSeries
 
         return self._time_series[(row, col)]
 
-    def closestTimeSeriesAt(self, latlon, **kwargs):  # (latlon :Geo.LatLonCoord) -> (timeSeries :TimeSeries);
-        # closest TimeSeries object which represents the whole time series 
+    def closestTimeSeriesAt(
+        self, latlon, **kwargs
+    ):  # (latlon :Geo.LatLonCoord) -> (timeSeries :TimeSeries);
+        # closest TimeSeries object which represents the whole time series
         # of the climate realization at the give climate coordinate
         lat, lon = (latlon.lat, latlon.lon)
         gk4_r, gk4_h = self._latlon_to_gk4_transformer.transform(lon, lat)
         row, col = self._interpolator(gk4_r, gk4_h)
         return self.time_series_at(row, col)
 
-    def timeSeriesAt(self, locationId, **kwargs):  # (locationId :Text) -> (timeSeries :TimeSeries);
+    def timeSeriesAt(
+        self, locationId, **kwargs
+    ):  # (locationId :Text) -> (timeSeries :TimeSeries);
         rs, cs = locationId.split("/")
         row = int(rs[2:])
         col = int(cs[2:])
@@ -260,11 +372,13 @@ class DatasetImpl(climate_data_capnp.Dataset.Server):
                 lonlat = self._gk4_to_latlon_transformer.transform(gk4_r, gk4_h)
                 ll_coord = {"lat": lonlat[1], "lon": lonlat[0], "alt": -9999}
             id = "r:{}/c:{}".format(row, col)
-            name = "Row/Col:{}/{}|LatLon:{}/{}".format(row, col, ll_coord["lat"], ll_coord["lon"])
+            name = "Row/Col:{}/{}|LatLon:{}/{}".format(
+                row, col, ll_coord["lat"], ll_coord["lon"]
+            )
             loc = climate_data_capnp.Location.new_message(
                 id={"id": id, "name": name, "description": ""},
                 heightNN=ll_coord["alt"],
-                latlon={"lat": ll_coord["lat"], "lon": ll_coord["lon"]}
+                latlon={"lat": ll_coord["lat"], "lon": ll_coord["lon"]},
             )
             if time_series:
                 loc.timeSeries = time_series
@@ -289,8 +403,17 @@ class DatasetImpl(climate_data_capnp.Dataset.Server):
         return locs
 
 
-async def async_main(path_to_nc_files, region="sn", serve_bootstrap=False,
-                     host="0.0.0.0", port=None, reg_sturdy_ref=None, id=None, name="Klima Konform", description=None):
+async def async_main(
+    path_to_nc_files,
+    region="sn",
+    serve_bootstrap=False,
+    host="0.0.0.0",
+    port=None,
+    reg_sturdy_ref=None,
+    id=None,
+    name="Klima Konform",
+    description=None,
+):
     config = {
         "path_to_nc_files": path_to_nc_files,
         "region": region,
@@ -318,13 +441,20 @@ async def async_main(path_to_nc_files, region="sn", serve_bootstrap=False,
     service = DatasetImpl(path_to_nc_files, config["region"])
 
     if config["reg_sturdy_ref"]:
-        registrator = await conMan.try_connect(config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator)
+        registrator = await conMan.try_connect(
+            config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator
+        )
         if registrator:
-            unreg = await registrator.register(ref=service, categoryId=config["reg_category"]).a_wait()
+            unreg = await registrator.register(
+                ref=service, categoryId=config["reg_category"]
+            ).a_wait()
             print("Registered ", config["name"], "climate service.")
             # await unreg.unregister.unregister().a_wait()
         else:
-            print("Couldn't connect to registrator at sturdy_ref:", config["reg_sturdy_ref"])
+            print(
+                "Couldn't connect to registrator at sturdy_ref:",
+                config["reg_sturdy_ref"],
+            )
 
     if config["serve_bootstrap"].upper() == "TRUE":
         await async_helpers.serve_forever(config["host"], config["port"], service)
@@ -332,5 +462,12 @@ async def async_main(path_to_nc_files, region="sn", serve_bootstrap=False,
         await conMan.manage_forever()
 
 
-if __name__ == '__main__':
-    asyncio.run(async_main("/home/berg/Schreibtisch/klima_konform/sn", region="sn", serve_bootstrap=True, port=8888))
+if __name__ == "__main__":
+    asyncio.run(
+        async_main(
+            "/home/berg/Schreibtisch/klima_konform/sn",
+            region="sn",
+            serve_bootstrap=True,
+            port=8888,
+        )
+    )

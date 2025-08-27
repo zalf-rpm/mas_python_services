@@ -22,11 +22,20 @@ from zalfmas_common import common
 from zalfmas_common import service as serv
 from zalfmas_common.climate import csv_file_based as csv_based
 import zalfmas_capnp_schemas
+
 sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
 
 
-async def main(path_to_csv_file, serve_bootstrap=True, host=None, port=None,
-               id=None, name="Single CSV Test Timeseries Service", description=None, srt=None):
+async def main(
+    path_to_csv_file,
+    serve_bootstrap=True,
+    host=None,
+    port=None,
+    id=None,
+    name="Single CSV Test Timeseries Service",
+    description=None,
+    srt=None,
+):
     config = {
         "path_to_csv_file": path_to_csv_file,
         "id_col_name": "id",
@@ -58,15 +67,21 @@ async def main(path_to_csv_file, serve_bootstrap=True, host=None, port=None,
             if k[:7] == "header_":
                 header_map[k[7:]] = v
 
-        service = csv_based.TimeSeries.from_csv_file(config["path_to_csv_file"],
-                                                     header_map=header_map,
-                                                     pandas_csv_config=pandas_csv_config)
-        await serv.init_and_run_service({"service": service}, config["host"], config["port"],
-                                        serve_bootstrap=config["serve_bootstrap"],
-                                        name_to_service_srs={"service": config["srt"]})
+        service = csv_based.TimeSeries.from_csv_file(
+            config["path_to_csv_file"],
+            header_map=header_map,
+            pandas_csv_config=pandas_csv_config,
+        )
+        await serv.init_and_run_service(
+            {"service": service},
+            config["host"],
+            config["port"],
+            serve_bootstrap=config["serve_bootstrap"],
+            name_to_service_srs={"service": config["srt"]},
+        )
     else:
         print("No path to csv file given.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(capnp.run(main(None)))

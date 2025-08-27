@@ -38,7 +38,10 @@ if str(PATH_TO_PYTHON_CODE) not in sys.path:
 
 PATH_TO_CAPNP_SCHEMAS = PATH_TO_REPO / "capnproto_schemas"
 abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
-dwd_service_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "model" / "weberest" / "web-berest-data-import.capnp"), imports=abs_imports)
+dwd_service_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "model" / "weberest" / "web-berest-data-import.capnp"),
+    imports=abs_imports,
+)
 
 
 def run_continuously(interval=1):
@@ -66,7 +69,14 @@ def run_continuously(interval=1):
     return cease_continuous_run
 
 
-def task(ftps_host, ftps_user, ftps_pwd, import_host="localhost", import_port="15000", specific_dates = None):
+def task(
+    ftps_host,
+    ftps_user,
+    ftps_pwd,
+    import_host="localhost",
+    import_port="15000",
+    specific_dates=None,
+):
     print("Running import task at", datetime.datetime.now())
     ds = [datetime.date.today()] if specific_dates is None else specific_dates
 
@@ -74,8 +84,12 @@ def task(ftps_host, ftps_user, ftps_pwd, import_host="localhost", import_port="1
     ftps.prot_p()
     ftps.cwd("dwd")
 
-    cap = capnp.TwoPartyClient(import_host + ":" + import_port).bootstrap().cast_as(dwd_service_capnp.DWLABImport)
-    
+    cap = (
+        capnp.TwoPartyClient(import_host + ":" + import_port)
+        .bootstrap()
+        .cast_as(dwd_service_capnp.DWLABImport)
+    )
+
     dates = [f"{d:%Y%m%d}" for d in ds]
     files = defaultdict(lambda: defaultdict(dict))
     for entry in filter(lambda e: e[1]["type"] == "file", ftps.mlsd(facts=["type"])):
@@ -86,11 +100,12 @@ def task(ftps_host, ftps_user, ftps_pwd, import_host="localhost", import_port="1
         time = int(entry[0][18:22])
         if date in dates and type in ["DWLA", "DWLB"]:
             files[date][type][time] = entry[0]
-    
+
     dates = list(files.keys())
     dates.sort()
     for date in dates:
         type_to_times = files[date]
+
         def retrieve(type):
             times = list(type_to_times[type].keys())
             if len(times) > 0:
@@ -99,20 +114,22 @@ def task(ftps_host, ftps_user, ftps_pwd, import_host="localhost", import_port="1
                 with io.BytesIO() as f:
                     ftps.retrbinary("RETR " + type_to_times[type][time], f.write)
                     return f.getvalue().decode("cp1252")
+
         dwla = retrieve("DWLA")
         dwla_comp = zlib.compress(dwla.encode("cp1252"))
-        #print("DWLA:\n", dwla)
+        # print("DWLA:\n", dwla)
         dwlb = retrieve("DWLB")
         dwlb_comp = zlib.compress(dwlb.encode("cp1252"))
-        #print("DWLB:\n", dwlb)
+        # print("DWLB:\n", dwlb)
 
         d = datetime.datetime.strptime(date, "%Y%m%d")
-        #print("len(dwla)=",len(dwla), " len(dwlb)=",len(dwlb))
-        #print("len(dwla_comp)=",len(dwla_comp), " len(dwlb_comp)=",len(dwlb_comp))
+        # print("len(dwla)=",len(dwla), " len(dwlb)=",len(dwlb))
+        # print("len(dwla_comp)=",len(dwla_comp), " len(dwlb_comp)=",len(dwlb_comp))
         success = cap.importData(f"{d:%Y-%m-%d}", dwla_comp, dwlb_comp).wait()
         print("Import succeeded?", success)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     config = {
         "ftps_host": "srv-fds-tran.zalf.de",
         "ftps_user": "dwduser2021",
@@ -120,9 +137,9 @@ if __name__ == '__main__':
         "import_host": "localhost",
         "import_port": "15000",
         "run_at": "11:00",
-        "dates" : None,
+        "dates": None,
         "from_date": None,
-        "to_date": None #"2022-02-05"
+        "to_date": None,  # "2022-02-05"
     }
     # read commandline args only if script is invoked directly from commandline
     if len(sys.argv) > 1 and __name__ == "__main__":
@@ -130,7 +147,7 @@ if __name__ == '__main__':
             k, v = arg.split("=")
             if k in config:
                 config[k] = v
-    #print("config used:", config)
+    # print("config used:", config)
 
     if config["ftps_pwd"] is None:
         print("ftps_pwd is missing!")
@@ -138,10 +155,16 @@ if __name__ == '__main__':
 
     import_dates = None
     if config["dates"] is not None:
-        import_dates = list(map(lambda d: datetime.date.fromisoformat(d), config["dates"].split(",")))
+        import_dates = list(
+            map(lambda d: datetime.date.fromisoformat(d), config["dates"].split(","))
+        )
     if config["from_date"] is not None:
         from_date = datetime.date.fromisoformat(config["from_date"])
-        to_date = datetime.date.today() if config["to_date"] is None else datetime.date.fromisoformat(config["to_date"])
+        to_date = (
+            datetime.date.today()
+            if config["to_date"] is None
+            else datetime.date.fromisoformat(config["to_date"])
+        )
         import_dates = []
         day = 0
         while from_date + datetime.timedelta(days=day) <= to_date:
@@ -149,9 +172,21 @@ if __name__ == '__main__':
             day += 1
 
     if import_dates is None:
-        schedule.every().day.at(config["run_at"]).do(task, config["ftps_host"], config["ftps_user"], config["ftps_pwd"], \
-            import_host=config["import_host"], import_port=config["import_port"])
-        run_continuously(60) #check every minute
+        schedule.every().day.at(config["run_at"]).do(
+            task,
+            config["ftps_host"],
+            config["ftps_user"],
+            config["ftps_pwd"],
+            import_host=config["import_host"],
+            import_port=config["import_port"],
+        )
+        run_continuously(60)  # check every minute
     else:
-        task(config["ftps_host"], config["ftps_user"], config["ftps_pwd"], specific_dates=import_dates, \
-            import_host=config["import_host"], import_port=config["import_port"])
+        task(
+            config["ftps_host"],
+            config["ftps_user"],
+            config["ftps_pwd"],
+            specific_dates=import_dates,
+            import_host=config["import_host"],
+            import_port=config["import_port"],
+        )

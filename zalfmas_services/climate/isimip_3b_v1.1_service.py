@@ -41,19 +41,28 @@ from pkgs.common import service as serv
 
 PATH_TO_CAPNP_SCHEMAS = PATH_TO_REPO / "capnproto_schemas"
 abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
-reg_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports)
-climate_data_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports)
+reg_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports
+)
+climate_data_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports
+)
 
 
-def create_meta_plus_datasets(path_to_config, config, interpolator, rowcol_to_latlon, restorer):
+def create_meta_plus_datasets(
+    path_to_config, config, interpolator, rowcol_to_latlon, restorer
+):
     general = config["general"]
     conf_datasets = config["datasets"]
 
     datasets = []
     for ds in conf_datasets:
         path_to_rowcols = str(
-            path_to_config / general["path_to_rowcols"].format(gcm=ds["gcm"], scen=ds["scen"],
-                                                               ensmem=ds["ensmem"]))
+            path_to_config
+            / general["path_to_rowcols"].format(
+                gcm=ds["gcm"], scen=ds["scen"], ensmem=ds["ensmem"]
+            )
+        )
         entries = entries = [
             {"gcm": ccdi.string_to_gcm(ds["gcm"])},
             {"ensMem": ccdi.string_to_ensmem(ds["ensmem"])},
@@ -70,19 +79,35 @@ def create_meta_plus_datasets(path_to_config, config, interpolator, rowcol_to_la
         metadata = climate_data_capnp.Metadata.new_message(entries=entries)
         name = "{}_{}_{}".format(ds["gcm"], ds["scen"], ds["ensmem"])
         metadata.info = ccdi.MetadataInfo(metadata)
-        datasets.append(climate_data_capnp.MetaPlusData.new_message(
-            meta=metadata,
-            data=csv_based.Dataset(metadata, path_to_rowcols, interpolator, rowcol_to_latlon,
-                                   gzipped=general["gz"],
-                                   row_col_pattern=general["row_col_pattern"],
-                                   restorer=restorer,
-                                   name=name)
-        ))
+        datasets.append(
+            climate_data_capnp.MetaPlusData.new_message(
+                meta=metadata,
+                data=csv_based.Dataset(
+                    metadata,
+                    path_to_rowcols,
+                    interpolator,
+                    rowcol_to_latlon,
+                    gzipped=general["gz"],
+                    row_col_pattern=general["row_col_pattern"],
+                    restorer=restorer,
+                    name=name,
+                ),
+            )
+        )
     return datasets
 
 
-async def main(path_to_config, serve_bootstrap=True, host=None, port=None,
-               id=None, name=None, description=None, reg_sturdy_ref=None, use_async=False):
+async def main(
+    path_to_config,
+    serve_bootstrap=True,
+    host=None,
+    port=None,
+    id=None,
+    name=None,
+    description=None,
+    reg_sturdy_ref=None,
+    use_async=False,
+):
     config = {
         "path_to_config": path_to_config,
         "config_toml_file": "metadata.toml",
@@ -103,7 +128,10 @@ async def main(path_to_config, serve_bootstrap=True, host=None, port=None,
         datasets_config = tomli.load(f)
 
     if not datasets_config:
-        print("Couldn't load datasets configuration from:", str(path_to_config / config["config_toml_file"]))
+        print(
+            "Couldn't load datasets configuration from:",
+            str(path_to_config / config["config_toml_file"]),
+        )
         exit(1)
 
     general = datasets_config["general"]
@@ -112,33 +140,64 @@ async def main(path_to_config, serve_bootstrap=True, host=None, port=None,
 
     conman = async_helpers.ConnectionManager()
     restorer = common.Restorer()
-    interpolator, rowcol_to_latlon = ccdi.create_lat_lon_interpolator_from_json_coords_file(
-        path_to_config / general["latlon_to_rowcol_mapping"])
-    meta_plus_data = create_meta_plus_datasets(path_to_config, datasets_config, interpolator, rowcol_to_latlon,
-                                               restorer)
-    service = ccdi.Service(meta_plus_data, id=config["id"], name=config["name"], description=config["description"],
-                           restorer=restorer)
+    interpolator, rowcol_to_latlon = (
+        ccdi.create_lat_lon_interpolator_from_json_coords_file(
+            path_to_config / general["latlon_to_rowcol_mapping"]
+        )
+    )
+    meta_plus_data = create_meta_plus_datasets(
+        path_to_config, datasets_config, interpolator, rowcol_to_latlon, restorer
+    )
+    service = ccdi.Service(
+        meta_plus_data,
+        id=config["id"],
+        name=config["name"],
+        description=config["description"],
+        restorer=restorer,
+    )
 
     if config["reg_sturdy_ref"]:
-        registrator = await conman.try_connect(config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator)
+        registrator = await conman.try_connect(
+            config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator
+        )
         if registrator:
-            unreg = await registrator.register(ref=service, categoryId=config["reg_category"]).a_wait()
+            unreg = await registrator.register(
+                ref=service, categoryId=config["reg_category"]
+            ).a_wait()
             print("Registered ", config["name"], "climate service.")
             # await unreg.unregister.unregister().a_wait()
         else:
-            print("Couldn't connect to registrator at sturdy_ref:", config["reg_sturdy_ref"])
+            print(
+                "Couldn't connect to registrator at sturdy_ref:",
+                config["reg_sturdy_ref"],
+            )
 
     if config["use_async"]:
-        await serv.async_init_and_run_service({"service": service}, config["host"], config["port"],
-                                              serve_bootstrap=config["serve_bootstrap"], restorer=restorer,
-                                              conn_man=conman)
+        await serv.async_init_and_run_service(
+            {"service": service},
+            config["host"],
+            config["port"],
+            serve_bootstrap=config["serve_bootstrap"],
+            restorer=restorer,
+            conn_man=conman,
+        )
     else:
-        serv.init_and_run_service({"service": service}, config["host"], config["port"],
-                                  serve_bootstrap=config["serve_bootstrap"], restorer=restorer, conn_man=conman)
+        serv.init_and_run_service(
+            {"service": service},
+            config["host"],
+            config["port"],
+            serve_bootstrap=config["serve_bootstrap"],
+            restorer=restorer,
+            conn_man=conman,
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # asyncio.run(main("/beegfs/common/data/climate/isimip/3b_v1.1_CMIP6", serve_bootstrap=True, use_async=True))
-    asyncio.run(main(
-        "/run/user/1000/gvfs/sftp:host=login01.cluster.zalf.de,user=rpm/beegfs/common/data/climate/isimip/3b_v1.1_CMIP6",
-        serve_bootstrap=True, use_async=True))
+    asyncio.run(
+        main(
+            "/run/user/1000/gvfs/sftp:host=login01.cluster.zalf.de,user=rpm/beegfs/common/data/climate/isimip/3b_v1.1_CMIP6",
+            serve_bootstrap=True,
+            use_async=True,
+        )
+    )

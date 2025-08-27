@@ -38,22 +38,32 @@ from pkgs.climate import csv_file_based as csv_based
 
 PATH_TO_CAPNP_SCHEMAS = PATH_TO_REPO / "capnproto_schemas"
 abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
-climate_data_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports)
-service_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "service.capnp"), imports=abs_imports)
-reg_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports)
-persistence_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "persistence.capnp"), imports=abs_imports)
+climate_data_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports
+)
+service_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "service.capnp"), imports=abs_imports
+)
+reg_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports
+)
+persistence_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "persistence.capnp"), imports=abs_imports
+)
 
 
 class Factory(climate_data_capnp.CSVTimeSeriesFactory.Server, common.Factory):
-
     def __init__(self, id=None, name=None, description=None):
         common.Factory.__init__(self, id, name, description)
 
-    def create_context(self,
-                       context):  # create @0 (csvData :Text, config :CSVConfig) -> (timeseries :TimeSeries, error :Text);
+    def create_context(
+        self, context
+    ):  # create @0 (csvData :Text, config :CSVConfig) -> (timeseries :TimeSeries, error :Text);
         c = context.params.config
         if c is None:
-            context.results.error = "No or wrong payload in message. Expected CSV payload."
+            context.results.error = (
+                "No or wrong payload in message. Expected CSV payload."
+            )
         else:
             csv = context.params.csvData
 
@@ -74,12 +84,15 @@ class Factory(climate_data_capnp.CSVTimeSeriesFactory.Server, common.Factory):
                     for i in range(0, c.skipLinesToHeader):
                         skip.append(i)
                     header_line = 0 if len(skip) == 0 else skip[-1] + 1
-                    for i in range(header_line + 1, header_line + 1 + c.skipLinesFromHeaderToData):
+                    for i in range(
+                        header_line + 1, header_line + 1 + c.skipLinesFromHeaderToData
+                    ):
                         skip.append(i)
                     pandas_csv_config["skip_rows"] = skip
 
-                    ts = csv_based.TimeSeries.from_csv_string(csv, header_map=header_map,
-                                                              pandas_csv_config=pandas_csv_config)
+                    ts = csv_based.TimeSeries.from_csv_string(
+                        csv, header_map=header_map, pandas_csv_config=pandas_csv_config
+                    )
                     ts.persistence_service = self.restorer
                     # self._time_series_caps.append(ts)
                     context.results.timeseries = ts
@@ -108,13 +121,20 @@ def main(serve_bootstrap=True, host="*", port=10000, reg_sturdy_ref=None):
     restorer = common.Restorer()
 
     if config["reg_sturdy_ref"]:
-        registrator = conMan.try_connect(config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator)
+        registrator = conMan.try_connect(
+            config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator
+        )
         if registrator:
-            unreg = registrator.register(ref=service, categoryId=config["reg_category"]).wait()
+            unreg = registrator.register(
+                ref=service, categoryId=config["reg_category"]
+            ).wait()
             print("Registered ", config["name"], "climate service.")
             # await unreg.unregister.unregister().a_wait()
         else:
-            print("Couldn't connect to registrator at sturdy_ref:", config["reg_sturdy_ref"])
+            print(
+                "Couldn't connect to registrator at sturdy_ref:",
+                config["reg_sturdy_ref"],
+            )
 
     addr = config["host"] + ((":" + str(config["port"])) if config["port"] else "")
     if config["serve_bootstrap"].lower() == "true":
@@ -154,13 +174,20 @@ async def async_main(serve_bootstrap=True, host=None, port=10000, reg_sturdy_ref
     restorer = common.Restorer()
 
     if config["reg_sturdy_ref"]:
-        registrator = await conMan.try_connect(config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator)
+        registrator = await conMan.try_connect(
+            config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator
+        )
         if registrator:
-            unreg = await registrator.register(ref=service, categoryId=config["reg_category"]).a_wait()
+            unreg = await registrator.register(
+                ref=service, categoryId=config["reg_category"]
+            ).a_wait()
             print("Registered ", config["name"], "climate service.")
             # await unreg.unregister.unregister().a_wait()
         else:
-            print("Couldn't connect to registrator at sturdy_ref:", config["reg_sturdy_ref"])
+            print(
+                "Couldn't connect to registrator at sturdy_ref:",
+                config["reg_sturdy_ref"],
+            )
 
     if config["serve_bootstrap"].lower() == "true":
         server = await async_helpers.serve(config["host"], config["port"], restorer)
@@ -177,6 +204,6 @@ async def async_main(serve_bootstrap=True, host=None, port=10000, reg_sturdy_ref
         await conMan.manage_forever()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # main()
     asyncio.run(async_main())

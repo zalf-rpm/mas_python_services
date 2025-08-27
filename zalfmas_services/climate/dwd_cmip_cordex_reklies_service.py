@@ -38,8 +38,12 @@ from pkgs.climate import csv_file_based as csv_based
 
 PATH_TO_CAPNP_SCHEMAS = PATH_TO_REPO / "capnproto_schemas"
 abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
-reg_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports)
-climate_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports)
+reg_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports
+)
+climate_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports
+)
 
 
 def create_meta_plus_datasets(path_to_data_dir, interpolator, rowcol_to_latlon):
@@ -63,25 +67,46 @@ def create_meta_plus_datasets(path_to_data_dir, interpolator, rowcol_to_latlon):
                                                 entries=[
                                                     {"gcm": ccdi.string_to_gcm(gcm)},
                                                     {"rcm": ccdi.string_to_rcm(rcm)},
-                                                    {"historical": None} if scen == "historical" else {"rcp": scen},
-                                                    {"ensMem": ccdi.string_to_ensmem(ensmem)},
-                                                    {"version": version}
+                                                    {"historical": None}
+                                                    if scen == "historical"
+                                                    else {"rcp": scen},
+                                                    {
+                                                        "ensMem": ccdi.string_to_ensmem(
+                                                            ensmem
+                                                        )
+                                                    },
+                                                    {"version": version},
                                                 ]
                                             )
                                             metadata.info = ccdi.MetadataInfo(metadata)
-                                            datasets.append(climate_capnp.MetaPlusData.new_message(
-                                                meta=metadata,
-                                                data=csv_based.Dataset(metadata, version_dir, interpolator,
-                                                                       rowcol_to_latlon,
-                                                                       header_map={"windspeed": "wind"},
-                                                                       row_col_pattern="row-{row}/col-{col}.csv")
-                                            ))
+                                            datasets.append(
+                                                climate_capnp.MetaPlusData.new_message(
+                                                    meta=metadata,
+                                                    data=csv_based.Dataset(
+                                                        metadata,
+                                                        version_dir,
+                                                        interpolator,
+                                                        rowcol_to_latlon,
+                                                        header_map={
+                                                            "windspeed": "wind"
+                                                        },
+                                                        row_col_pattern="row-{row}/col-{col}.csv",
+                                                    ),
+                                                )
+                                            )
     return datasets
 
 
-async def async_main(path_to_data, serve_bootstrap=False,
-                     host="0.0.0.0", port=None, reg_sturdy_ref=None, id=None, name="DWD - CMIP Cordex Reklies",
-                     description=None):
+async def async_main(
+    path_to_data,
+    serve_bootstrap=False,
+    host="0.0.0.0",
+    port=None,
+    reg_sturdy_ref=None,
+    id=None,
+    name="DWD - CMIP Cordex Reklies",
+    description=None,
+):
     config = {
         "path_to_data": path_to_data,
         "host": host,
@@ -103,19 +128,36 @@ async def async_main(path_to_data, serve_bootstrap=False,
 
     conMan = async_helpers.ConnectionManager()
 
-    interpolator, rowcol_to_latlon = ccdi.create_lat_lon_interpolator_from_json_coords_file(
-        config["path_to_data"] + "/" + "latlon-to-rowcol.json")
-    meta_plus_data = create_meta_plus_datasets(config["path_to_data"] + "/csv", interpolator, rowcol_to_latlon)
-    service = ccdi.Service(meta_plus_data, id=config["id"], name=config["name"], description=config["description"])
+    interpolator, rowcol_to_latlon = (
+        ccdi.create_lat_lon_interpolator_from_json_coords_file(
+            config["path_to_data"] + "/" + "latlon-to-rowcol.json"
+        )
+    )
+    meta_plus_data = create_meta_plus_datasets(
+        config["path_to_data"] + "/csv", interpolator, rowcol_to_latlon
+    )
+    service = ccdi.Service(
+        meta_plus_data,
+        id=config["id"],
+        name=config["name"],
+        description=config["description"],
+    )
 
     if config["reg_sturdy_ref"]:
-        registrator = await conMan.try_connect(config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator)
+        registrator = await conMan.try_connect(
+            config["reg_sturdy_ref"], cast_as=reg_capnp.Registrator
+        )
         if registrator:
-            unreg = await registrator.register(ref=service, categoryId=config["reg_category"]).a_wait()
+            unreg = await registrator.register(
+                ref=service, categoryId=config["reg_category"]
+            ).a_wait()
             print("Registered ", config["name"], "climate service.")
             # await unreg.unregister.unregister().a_wait()
         else:
-            print("Couldn't connect to registrator at sturdy_ref:", config["reg_sturdy_ref"])
+            print(
+                "Couldn't connect to registrator at sturdy_ref:",
+                config["reg_sturdy_ref"],
+            )
 
     if config["serve_bootstrap"].upper() == "TRUE":
         await async_helpers.serve_forever(config["host"], config["port"], service)
@@ -123,5 +165,5 @@ async def async_main(path_to_data, serve_bootstrap=False,
         await conMan.manage_forever()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(async_main("/beegfs/common/data/climate/dwd/cmip_cordex_reklies"))

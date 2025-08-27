@@ -25,6 +25,7 @@ import os
 from pathlib import Path
 from pyproj import Transformer
 import sys
+
 # import time
 import uuid
 
@@ -68,7 +69,9 @@ def fbp_wrapper(config, service: grid_capnp.Grid):
             out_ip = fbp_capnp.IP.new_message()
             if not config["to_attr"]:
                 out_ip.content = val
-            common.copy_and_set_fbp_attrs(in_ip, out_ip, **({config["to_attr"]: val} if config["to_attr"] else {}))
+            common.copy_and_set_fbp_attrs(
+                in_ip, out_ip, **({config["to_attr"]: val} if config["to_attr"] else {})
+            )
             ports["out"].write(value=out_ip).wait()
 
     except Exception as e:
@@ -78,10 +81,23 @@ def fbp_wrapper(config, service: grid_capnp.Grid):
     print(f"{os.path.basename(__file__)}: process finished")
 
 
-class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persistable, serv.AdministrableService):
-
-    def __init__(self, path_to_ascii_grid, grid_crs, val_type, id=None, name=None, description=None, admin=None,
-                 restorer=None):
+class RectMeterGrid(
+    grid_capnp.Grid.Server,
+    common.Identifiable,
+    common.Persistable,
+    serv.AdministrableService,
+):
+    def __init__(
+        self,
+        path_to_ascii_grid,
+        grid_crs,
+        val_type,
+        id=None,
+        name=None,
+        description=None,
+        admin=None,
+        restorer=None,
+    ):
         common.Identifiable.__init__(self, id, name, description)
         common.Persistable.__init__(self, restorer)
         serv.AdministrableService.__init__(self, admin)
@@ -93,26 +109,43 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
         self._path = path_to_ascii_grid
         self._grid_crs = grid_crs
         self._wgs84 = geo.name_to_crs("latlon")
-        self._grid_crs_to_latlon = Transformer.from_crs(grid_crs, self._wgs84, always_xy=True)
-        self._latlon_to_grid_crs = Transformer.from_crs(self._wgs84, grid_crs, always_xy=True)
+        self._grid_crs_to_latlon = Transformer.from_crs(
+            grid_crs, self._wgs84, always_xy=True
+        )
+        self._latlon_to_grid_crs = Transformer.from_crs(
+            self._wgs84, grid_crs, always_xy=True
+        )
         self._val_type = val_type
 
-        self._grid, self._metadata = grid_man.load_grid_and_metadata_from_ascii_grid(path_to_ascii_grid,
-                                                                                     datatype=val_type)
-        self._include_nodata_rowcol_interpol, _ = grid_man.create_interpolator_from_rect_grid(self._grid,
-                                                                                              self._metadata,
-                                                                                              ignore_nodata=False,
-                                                                                              row_col_value=True,
-                                                                                              no_points_to_values=True)
-        self._ignore_nodata_rowcol_interpol, _ = grid_man.create_interpolator_from_rect_grid(self._grid, self._metadata,
-                                                                                             ignore_nodata=True,
-                                                                                             row_col_value=True,
-                                                                                             no_points_to_values=True)
+        self._grid, self._metadata = grid_man.load_grid_and_metadata_from_ascii_grid(
+            path_to_ascii_grid, datatype=val_type
+        )
+        self._include_nodata_rowcol_interpol, _ = (
+            grid_man.create_interpolator_from_rect_grid(
+                self._grid,
+                self._metadata,
+                ignore_nodata=False,
+                row_col_value=True,
+                no_points_to_values=True,
+            )
+        )
+        self._ignore_nodata_rowcol_interpol, _ = (
+            grid_man.create_interpolator_from_rect_grid(
+                self._grid,
+                self._metadata,
+                ignore_nodata=True,
+                row_col_value=True,
+                no_points_to_values=True,
+            )
+        )
         self._cellsize = int(self._metadata["cellsize"])
         self._nrows = int(self._metadata["nrows"])
         self._ncols = int(self._metadata["ncols"])
-        self._nodata = int(self._metadata["nodata_value"]) if self._val_type == int else float(
-            self._metadata["nodata_value"])
+        self._nodata = (
+            int(self._metadata["nodata_value"])
+            if self._val_type == int
+            else float(self._metadata["nodata_value"])
+        )
         self._xll = int(self._metadata["xllcorner"])
         self._yll = int(self._metadata["yllcorner"])
 
@@ -125,11 +158,22 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
             val = {"f": float(value)}
         return val
 
-    async def closestValueAt(self, latlonCoord, ignoreNoData, resolution, agg, returnRowCols, includeAggParts, _context,
-                             **kwargs):  # closestValueAt @0 (latlonCoord :Geo.LatLonCoord, ignoreNoData :Bool, resolution :UInt64, agg :Aggregation = none, includeAggParts :Bool = false) -> (val :Value, tl :RowCol, br :RowCol, aggParts :List(AggregationPart));
+    async def closestValueAt(
+        self,
+        latlonCoord,
+        ignoreNoData,
+        resolution,
+        agg,
+        returnRowCols,
+        includeAggParts,
+        _context,
+        **kwargs,
+    ):  # closestValueAt @0 (latlonCoord :Geo.LatLonCoord, ignoreNoData :Bool, resolution :UInt64, agg :Aggregation = none, includeAggParts :Bool = false) -> (val :Value, tl :RowCol, br :RowCol, aggParts :List(AggregationPart));
         lat = latlonCoord.lat
         lon = latlonCoord.lon
-        resolution_ = resolution.meter if resolution.which() == "meter" else resolution.degree
+        resolution_ = (
+            resolution.meter if resolution.which() == "meter" else resolution.degree
+        )
 
         r, h = self._latlon_to_grid_crs.transform(lon, lat)
         if ignoreNoData:
@@ -143,8 +187,9 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
             return (val, rc, rc) if returnRowCols else val
 
         elif resolution_ % self._cellsize == 0:
-
-            union_value, aggValues, tl, br = self.valueAtRowCol(int(row), int(col), resolution_, agg, includeAggParts)
+            union_value, aggValues, tl, br = self.valueAtRowCol(
+                int(row), int(col), resolution_, agg, includeAggParts
+            )
 
             if agg == "none":
                 _context.results.aggParts = aggValues
@@ -162,17 +207,33 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
             else:
                 return (union_value, tl, br) if returnRowCols else union_value
 
-    async def valueAt(self, row, col, resolution, agg, includeAggParts, _context,
-                      **kwargs):  # valueAt @4 (row :UInt64, col :UInt64, resolution :UInt64, agg :Aggregation = none, includeAggParts :Bool = false) -> (val :Value, aggParts :List(AggregationPart));
+    async def valueAt(
+        self, row, col, resolution, agg, includeAggParts, _context, **kwargs
+    ):  # valueAt @4 (row :UInt64, col :UInt64, resolution :UInt64, agg :Aggregation = none, includeAggParts :Bool = false) -> (val :Value, aggParts :List(AggregationPart));
+        resolution_ = (
+            resolution.meter if resolution.which() == "meter" else resolution.degree
+        )
 
-        resolution_ = resolution.meter if resolution.which() == "meter" else resolution.degree
-
-        if resolution_ <= self._cellsize and row >= 0 and row < self._nrows and col >= 0 and col < self._ncols:
+        if (
+            resolution_ <= self._cellsize
+            and row >= 0
+            and row < self._nrows
+            and col >= 0
+            and col < self._ncols
+        ):
             value = self._grid[row, col]
             return self.to_union(value)
 
-        elif resolution_ % self._cellsize == 0 and row >= 0 and row < self._nrows and col >= 0 and col < self._ncols:
-            union_value, aggValues, _, _ = self.valueAtRowCol(row, col, resolution_, agg, includeAggParts)
+        elif (
+            resolution_ % self._cellsize == 0
+            and row >= 0
+            and row < self._nrows
+            and col >= 0
+            and col < self._ncols
+        ):
+            union_value, aggValues, _, _ = self.valueAtRowCol(
+                row, col, resolution_, agg, includeAggParts
+            )
 
             if agg == "none":
                 _context.results.aggParts = aggValues
@@ -185,14 +246,15 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                 return union_value
 
     def valueAtRowCol(self, row, col, resolution, agg, includeAggParts):
-
         cellsize = self._cellsize
 
         # what is outside of main cell
         boundary_size = resolution - cellsize
         # divide amongst sides (left/right, top/bottom)
         boundary_size_per_side = boundary_size // 2
-        full_cell_count, rest_outer_boundary_size = divmod(boundary_size_per_side, cellsize)
+        full_cell_count, rest_outer_boundary_size = divmod(
+            boundary_size_per_side, cellsize
+        )
 
         cells = [(row, col, 1.0, None)]
         tl = {"row": row, "col": col}
@@ -211,7 +273,14 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                 if left_col >= 0:
                     # store top left row/col
                     outer_tl = {"row": top_row, "col": left_col}
-                    cells.append((top_row, left_col, fraction * fraction, (top_row + 1, left_col + 1)))
+                    cells.append(
+                        (
+                            top_row,
+                            left_col,
+                            fraction * fraction,
+                            (top_row + 1, left_col + 1),
+                        )
+                    )
 
                     # top side
                 for i in range(1, 1 + (2 * full_cell_count) + 1):
@@ -225,7 +294,14 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                 # top right corner
                 right_col = col + full_cell_count + 1
                 if right_col <= self._ncols - 1:
-                    cells.append((top_row, right_col, fraction * fraction, (top_row + 1, right_col - 1)))
+                    cells.append(
+                        (
+                            top_row,
+                            right_col,
+                            fraction * fraction,
+                            (top_row + 1, right_col - 1),
+                        )
+                    )
 
                     # left side
             left_col = col - full_cell_count - 1
@@ -249,14 +325,23 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                     if top_i >= 0:
                         # store bottom right row/col
                         outer_br = {"row": top_i, "col": right_col}
-                        cells.append((top_i, right_col, fraction, (top_i, right_col - 1)))
+                        cells.append(
+                            (top_i, right_col, fraction, (top_i, right_col - 1))
+                        )
 
             bottom_row = row + full_cell_count + 1
             if bottom_row <= self._nrows - 1:
                 # bottom left corner
                 left_col = col - full_cell_count - 1
                 if left_col >= 0:
-                    cells.append((bottom_row, left_col, fraction * fraction, (bottom_row - 1, left_col + 1)))
+                    cells.append(
+                        (
+                            bottom_row,
+                            left_col,
+                            fraction * fraction,
+                            (bottom_row - 1, left_col + 1),
+                        )
+                    )
 
                     # bottom side
                 for i in range(1, 1 + (2 * full_cell_count) + 1):
@@ -264,14 +349,23 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                     if 0 <= left_i and left_i <= self._ncols - 1:
                         # store bottom right row/col
                         outer_br = {"row": bottom_row, "col": left_i}
-                        cells.append((bottom_row, left_i, fraction, (bottom_row - 1, left_i)))
+                        cells.append(
+                            (bottom_row, left_i, fraction, (bottom_row - 1, left_i))
+                        )
 
                 # bottom right corner
                 right_col = col + full_cell_count + 1
                 if right_col <= self._ncols - 1:
                     # store bottom right row/col
                     outer_br = {"row": bottom_row, "col": right_col}
-                    cells.append((bottom_row, right_col, fraction * fraction, (bottom_row - 1, right_col - 1)))
+                    cells.append(
+                        (
+                            bottom_row,
+                            right_col,
+                            fraction * fraction,
+                            (bottom_row - 1, right_col - 1),
+                        )
+                    )
 
             if outer_br is not None:
                 br = outer_br
@@ -310,7 +404,7 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                     "value": self.to_union(val),
                     "rowCol": {"row": r, "col": c},
                     "areaFrac": frac,
-                    "iValue": 0
+                    "iValue": 0,
                 }
             if val == self._nodata:
                 continue
@@ -322,7 +416,6 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
         interpolated_values = []
         if str(agg)[0] == "i":
             for r, c, frac, closest_full_cell in cells:
-
                 if int(frac) == 1 or closest_full_cell is None:
                     interpolated_values.append(rc_to_val[(r, c)])
                     continue
@@ -332,9 +425,13 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                 dr = abs(r - fr)
                 dc = abs(c - fc)
 
-                full_dist = math.sqrt(dr * cellsize ** 2 + dc * cellsize ** 2)
-                half_full_dist = math.sqrt(dr * (cellsize / 2) ** 2 + dc * (cellsize / 2) ** 2)
-                half_short_dist = math.sqrt(dr * frac * (cellsize / 2) ** 2 + dc * frac * (cellsize / 2) ** 2)
+                full_dist = math.sqrt(dr * cellsize**2 + dc * cellsize**2)
+                half_full_dist = math.sqrt(
+                    dr * (cellsize / 2) ** 2 + dc * (cellsize / 2) ** 2
+                )
+                half_short_dist = math.sqrt(
+                    dr * frac * (cellsize / 2) ** 2 + dc * frac * (cellsize / 2) ** 2
+                )
 
                 fval = rc_to_val[(fr, fc)]
                 interpol_value = fval * (half_full_dist + half_short_dist) / full_dist
@@ -349,10 +446,16 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                 value = sum(values) / len(values) if len(values) > 0 else 0
             elif agg == "wAvg":
                 # calc weighted average https://www.indeed.com/career-advice/career-development/how-to-calculate-weighted-average
-                value = sum(map(lambda t: t[0], weighted_values)) / sum(map(lambda t: t[1], weighted_values))
+                value = sum(map(lambda t: t[0], weighted_values)) / sum(
+                    map(lambda t: t[1], weighted_values)
+                )
             elif agg == "iAvg":
                 # calc interpolated average
-                value = sum(interpolated_values) / len(interpolated_values) if len(interpolated_values) > 0 else 0
+                value = (
+                    sum(interpolated_values) / len(interpolated_values)
+                    if len(interpolated_values) > 0
+                    else 0
+                )
             elif agg == "median":
                 # calc median
                 values.sort()
@@ -372,8 +475,9 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
                         value = weighted_value
                         break
                     elif running_fraction / sum_fractions == 0.5:
-                        value = (weighted_value + weighted_values[i + 1][
-                            0]) / 2.0  # it should be impossible to have no i+1 if == 0.5
+                        value = (
+                            weighted_value + weighted_values[i + 1][0]
+                        ) / 2.0  # it should be impossible to have no i+1 if == 0.5
                         break
             elif agg == "iMedian":
                 # calc interpolated median
@@ -407,16 +511,21 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
     async def resolution(self, **kwargs):  # resolution @1 () -> (res :Resolution);
         return {"meter": self._cellsize}
 
-    async def dimension(self, **kwargs):  # dimension @2 () -> (rows :UInt64, cols :UInt64);
+    async def dimension(
+        self, **kwargs
+    ):  # dimension @2 () -> (rows :UInt64, cols :UInt64);
         return (self._nrows, self._ncols)
 
     async def noDataValue(self, **kwargs):  # noDataValue @3 () -> (nodata :Value);
-        return {"i": int(self._metadata["nodata_value"])} if self._val_type == int else {
-            "f": float(self._metadata["nodata_value"])}
+        return (
+            {"i": int(self._metadata["nodata_value"])}
+            if self._val_type == int
+            else {"f": float(self._metadata["nodata_value"])}
+        )
 
-    async def latLonBounds(self, useCellCenter,
-                           **kwargs):  # latLonBounds @5 (useCellCenter :Bool = false) -> (tl :Geo.LatLonCoord, tr :Geo.LatLonCoord, br :Geo.LatLonCoord, bl :Geo.LatLonCoord);
-
+    async def latLonBounds(
+        self, useCellCenter, **kwargs
+    ):  # latLonBounds @5 (useCellCenter :Bool = false) -> (tl :Geo.LatLonCoord, tr :Geo.LatLonCoord, br :Geo.LatLonCoord, bl :Geo.LatLonCoord);
         bl_x = self._xll + self._cellsize // 2 if useCellCenter else self._xll
         bl_y = self._yll + self._cellsize // 2 if useCellCenter else self._yll
         bl_lon, bl_lat = self._grid_crs_to_latlon.transform(bl_x, bl_y)
@@ -437,12 +546,22 @@ class RectMeterGrid(grid_capnp.Grid.Server, common.Identifiable, common.Persista
             {"lat": tl_lat, "lon": tl_lon},
             {"lat": tr_lat, "lon": tr_lon},
             {"lat": br_lat, "lon": br_lon},
-            {"lat": bl_lat, "lon": bl_lon}
+            {"lat": bl_lat, "lon": bl_lon},
         )
 
 
-async def main(path_to_ascii_grid=None, grid_crs=None, val_type=None, serve_bootstrap=True, host=None, port=None,
-               id=None, name="Grid Service", description=None, srt=None):
+async def main(
+    path_to_ascii_grid=None,
+    grid_crs=None,
+    val_type=None,
+    serve_bootstrap=True,
+    host=None,
+    port=None,
+    id=None,
+    name="Grid Service",
+    description=None,
+    srt=None,
+):
     config = {
         "path_to_ascii_grid": path_to_ascii_grid,
         "grid_crs": grid_crs,
@@ -458,33 +577,39 @@ async def main(path_to_ascii_grid=None, grid_crs=None, val_type=None, serve_boot
         "out_sr": None,
         "from_attr": None,  # "latlon"
         "to_attr": None,  # "dgm",
-        "srt": srt
+        "srt": srt,
     }
     common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
 
     restorer = common.Restorer()
-    service = RectMeterGrid(path_to_ascii_grid=config["path_to_ascii_grid"],
-                           grid_crs=geo.name_to_crs(config["grid_crs"]),
-                           val_type=int if config["val_type"] == "int" else float,
-                           id=config["id"],
-                           name=config["name"],
-                           description=config["description"],
-                           restorer=restorer)
+    service = RectMeterGrid(
+        path_to_ascii_grid=config["path_to_ascii_grid"],
+        grid_crs=geo.name_to_crs(config["grid_crs"]),
+        val_type=int if config["val_type"] == "int" else float,
+        id=config["id"],
+        name=config["name"],
+        description=config["description"],
+        restorer=restorer,
+    )
     if config["fbp"]:
         fbp_wrapper(config, grid_capnp.Grid._new_client(service))
 
     else:
-        await serv.init_and_run_service({"service": service}, config["host"], config["port"],
-                                    serve_bootstrap=config["serve_bootstrap"],
-                                    name_to_service_srs={"service": config["srt"]},
-                                    restorer=restorer)
+        await serv.init_and_run_service(
+            {"service": service},
+            config["host"],
+            config["port"],
+            serve_bootstrap=config["serve_bootstrap"],
+            name_to_service_srs={"service": config["srt"]},
+            restorer=restorer,
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # grid = "data/geo/dem_1000_31469_gk5.asc"
-    #grid = str(Path(zalfmas_capnp_schemas.__file__).parent.parent / "data/geo/slope_1000_31469_gk5.asc")
-    #crs = "gk5"
-    #asyncio.run(capnp.run(main(grid, crs, "float", serve_bootstrap=True)))
-    #asyncio.run(capnp.run(main(path_to_ascii_grid="/home/berg/GitHub/klimertrag_2/data/germany/buek200_1000_25832_etrs89-utm32n.asc",
+    # grid = str(Path(zalfmas_capnp_schemas.__file__).parent.parent / "data/geo/slope_1000_31469_gk5.asc")
+    # crs = "gk5"
+    # asyncio.run(capnp.run(main(grid, crs, "float", serve_bootstrap=True)))
+    # asyncio.run(capnp.run(main(path_to_ascii_grid="/home/berg/GitHub/klimertrag_2/data/germany/buek200_1000_25832_etrs89-utm32n.asc",
     #                           srt="soil", grid_crs="utm32n", val_type="int", serve_bootstrap=True, port=9901)))
     asyncio.run(capnp.run(main(serve_bootstrap=True)))

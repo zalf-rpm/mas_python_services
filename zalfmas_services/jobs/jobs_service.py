@@ -39,9 +39,15 @@ abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
 jobs_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "jobs.capnp"), imports=abs_imports)
 
 
-class Service(jobs_capnp.Service.Server, common.Identifiable, common.Persistable, serv.AdministrableService):
-
-    def __init__(self, jobs=[], id=None, name=None, description=None, admin=None, restorer=None):
+class Service(
+    jobs_capnp.Service.Server,
+    common.Identifiable,
+    common.Persistable,
+    serv.AdministrableService,
+):
+    def __init__(
+        self, jobs=[], id=None, name=None, description=None, admin=None, restorer=None
+    ):
         common.Identifiable.__init__(self, id, name, description)
         common.Persistable.__init__(self, restorer)
         serv.AdministrableService.__init__(self, admin)
@@ -58,8 +64,17 @@ class Service(jobs_capnp.Service.Server, common.Identifiable, common.Persistable
 
 # ------------------------------------------------------------------------------
 
-async def main(path_to_csv, serve_bootstrap=True, host=None, port=None,
-               id=None, name="Jobs Service", description=None, use_async=False):
+
+async def main(
+    path_to_csv,
+    serve_bootstrap=True,
+    host=None,
+    port=None,
+    id=None,
+    name="Jobs Service",
+    description=None,
+    use_async=False,
+):
     config = {
         "path_to_csv": path_to_csv,
         "id_col_name": "dummy_id",
@@ -69,7 +84,7 @@ async def main(path_to_csv, serve_bootstrap=True, host=None, port=None,
         "name": name,
         "description": description,
         "serve_bootstrap": serve_bootstrap,
-        "use_async": use_async
+        "use_async": use_async,
     }
     # read commandline args only if script is invoked directly from commandline
     common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
@@ -77,15 +92,30 @@ async def main(path_to_csv, serve_bootstrap=True, host=None, port=None,
     restorer = common.Restorer()
     jobs = csv.read_csv(config["path_to_csv"], config["id_col_name"])
     jobs2 = [json.dumps(v) for k, v in jobs.items()]
-    service = Service(jobs2, id=config["id"], name=config["name"], description=config["description"], restorer=restorer)
+    service = Service(
+        jobs2,
+        id=config["id"],
+        name=config["name"],
+        description=config["description"],
+        restorer=restorer,
+    )
     if use_async:
-        await serv.async_init_and_run_service({"service": service}, config["host"], config["port"],
-                                              serve_bootstrap=config["serve_bootstrap"], restorer=restorer)
+        await serv.async_init_and_run_service(
+            {"service": service},
+            config["host"],
+            config["port"],
+            serve_bootstrap=config["serve_bootstrap"],
+            restorer=restorer,
+        )
     else:
+        serv.init_and_run_service(
+            {"service": service},
+            config["host"],
+            config["port"],
+            serve_bootstrap=config["serve_bootstrap"],
+            restorer=restorer,
+        )
 
-        serv.init_and_run_service({"service": service}, config["host"], config["port"],
-                                  serve_bootstrap=config["serve_bootstrap"], restorer=restorer)
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main("/home/berg/Desktop/Koordinaten_HE_dummy_ID.csv", use_async=True))

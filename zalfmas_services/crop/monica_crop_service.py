@@ -25,10 +25,12 @@ import uuid
 from zalfmas_common import common
 from zalfmas_common import service as serv
 import zalfmas_capnp_schemas
+
 capnp_path = Path(os.path.dirname(zalfmas_capnp_schemas.__file__))
 sys.path.append(str(capnp_path))
 import registry_capnp as reg_capnp
 import crop_capnp
+
 sys.path.append(str(capnp_path / "model" / "monica"))
 import monica_params_capnp
 
@@ -37,10 +39,19 @@ LAST_ADMIN_SR_KEY_NAME = "last_admin_sr"
 SERVICE_ITSELF_RESTORE_TOKEN = "monica_crop_service_itself"
 ADMIN_RESTORE_TOKEN = "monica_crop_service_admin"
 
-class Crop(crop_capnp.Crop.Server):
 
-    def __init__(self, species_info, species_path, cult_info, cult_path, residue_path, #entry_ref,
-                 id=None, name=None, description=None):
+class Crop(crop_capnp.Crop.Server):
+    def __init__(
+        self,
+        species_info,
+        species_path,
+        cult_info,
+        cult_path,
+        residue_path,  # entry_ref,
+        id=None,
+        name=None,
+        description=None,
+    ):
         self._id = id if id else str(uuid.uuid4())
         self._name = name if name else id
         self._description = description if description else ""
@@ -48,7 +59,7 @@ class Crop(crop_capnp.Crop.Server):
         self._cult_path = cult_path
         self._residue_path = residue_path
         self._params = None
-        #self._entry_ref = entry_ref
+        # self._entry_ref = entry_ref
         self._species_info = species_info
         self._cultivar_info = cult_info
 
@@ -61,9 +72,12 @@ class Crop(crop_capnp.Crop.Server):
 
     @staticmethod
     def get_value(val_or_arr, expected_val_dim=0):
-
         def get_dim_of_first_value(arr):
-            return 1 + (get_dim_of_first_value(arr[0]) if len(arr) > 0 else 0) if type(arr) is list else 0
+            return (
+                1 + (get_dim_of_first_value(arr[0]) if len(arr) > 0 else 0)
+                if type(arr) is list
+                else 0
+            )
 
         dim = get_dim_of_first_value(val_or_arr)
         if dim > expected_val_dim:
@@ -76,7 +90,9 @@ class Crop(crop_capnp.Crop.Server):
 
         sp.speciesId = self.get_value(j.get("SpeciesName", ""))
         sp.carboxylationPathway = int(self.get_value(j.get("CarboxylationPathway", 0)))
-        sp.defaultRadiationUseEfficiency = self.get_value(j.get("DefaultRadiationUseEfficiency", 0))
+        sp.defaultRadiationUseEfficiency = self.get_value(
+            j.get("DefaultRadiationUseEfficiency", 0)
+        )
         sp.partBiologicalNFixation = self.get_value(j.get("PartBiologicalNFixation", 0))
         sp.initialKcFactor = self.get_value(j.get("InitialKcFactor", 0))
         sp.luxuryNCoeff = self.get_value(j.get("LuxuryNCoeff", 0))
@@ -84,26 +100,52 @@ class Crop(crop_capnp.Crop.Server):
         sp.stageAtMaxHeight = self.get_value(j.get("StageAtMaxHeight", 0))
         sp.stageAtMaxDiameter = self.get_value(j.get("StageAtMaxDiameter", 0))
         sp.minimumNConcentration = self.get_value(j.get("MinimumNConcentration", 0))
-        sp.minimumTemperatureForAssimilation = self.get_value(j.get("MinimumTemperatureForAssimilation", 0))
-        sp.optimumTemperatureForAssimilation = self.get_value(j.get("OptimumTemperatureForAssimilation", 0))
-        sp.maximumTemperatureForAssimilation = self.get_value(j.get("MaximumTemperatureForAssimilation", 0))
-        sp.nConcentrationAbovegroundBiomass = self.get_value(j.get("NConcentrationAbovegroundBiomass", 0))
+        sp.minimumTemperatureForAssimilation = self.get_value(
+            j.get("MinimumTemperatureForAssimilation", 0)
+        )
+        sp.optimumTemperatureForAssimilation = self.get_value(
+            j.get("OptimumTemperatureForAssimilation", 0)
+        )
+        sp.maximumTemperatureForAssimilation = self.get_value(
+            j.get("MaximumTemperatureForAssimilation", 0)
+        )
+        sp.nConcentrationAbovegroundBiomass = self.get_value(
+            j.get("NConcentrationAbovegroundBiomass", 0)
+        )
         sp.nConcentrationB0 = self.get_value(j.get("NConcentrationB0", 0))
         sp.nConcentrationPN = self.get_value(j.get("NConcentrationPN", 0))
         sp.nConcentrationRoot = self.get_value(j.get("NConcentrationRoot", 0))
-        sp.developmentAccelerationByNitrogenStress = int(self.get_value(j.get("DevelopmentAccelerationByNitrogenStress", 0)))
+        sp.developmentAccelerationByNitrogenStress = int(
+            self.get_value(j.get("DevelopmentAccelerationByNitrogenStress", 0))
+        )
         sp.fieldConditionModifier = self.get_value(j.get("FieldConditionModifier", 1))
         sp.assimilateReallocation = self.get_value(j.get("AssimilateReallocation", 0))
 
-        sp.baseTemperature = self.get_value(j.get("BaseTemperature", []), expected_val_dim=1)
-        sp.organMaintenanceRespiration = self.get_value(j.get("OrganMaintenanceRespiration", []), expected_val_dim=1)
-        sp.organGrowthRespiration = self.get_value(j.get("OrganGrowthRespiration", []), expected_val_dim=1)
-        sp.stageMaxRootNConcentration = self.get_value(j.get("StageMaxRootNConcentration", []), expected_val_dim=1)
-        sp.initialOrganBiomass = self.get_value(j.get("InitialOrganBiomass", []), expected_val_dim=1)
-        sp.criticalOxygenContent = self.get_value(j.get("CriticalOxygenContent", []), expected_val_dim=1)
-        sp.stageMobilFromStorageCoeff = self.get_value(j.get("StageMobilFromStorageCoeff", []), expected_val_dim=1)
+        sp.baseTemperature = self.get_value(
+            j.get("BaseTemperature", []), expected_val_dim=1
+        )
+        sp.organMaintenanceRespiration = self.get_value(
+            j.get("OrganMaintenanceRespiration", []), expected_val_dim=1
+        )
+        sp.organGrowthRespiration = self.get_value(
+            j.get("OrganGrowthRespiration", []), expected_val_dim=1
+        )
+        sp.stageMaxRootNConcentration = self.get_value(
+            j.get("StageMaxRootNConcentration", []), expected_val_dim=1
+        )
+        sp.initialOrganBiomass = self.get_value(
+            j.get("InitialOrganBiomass", []), expected_val_dim=1
+        )
+        sp.criticalOxygenContent = self.get_value(
+            j.get("CriticalOxygenContent", []), expected_val_dim=1
+        )
+        sp.stageMobilFromStorageCoeff = self.get_value(
+            j.get("StageMobilFromStorageCoeff", []), expected_val_dim=1
+        )
 
-        sp.abovegroundOrgan = self.get_value(j.get("AbovegroundOrgan", []), expected_val_dim=1)
+        sp.abovegroundOrgan = self.get_value(
+            j.get("AbovegroundOrgan", []), expected_val_dim=1
+        )
         sp.storageOrgan = self.get_value(j.get("StorageOrgan", []), expected_val_dim=1)
 
         sp.samplingDepth = self.get_value(j.get("SamplingDepth", 0))
@@ -113,15 +155,21 @@ class Crop(crop_capnp.Crop.Server):
         sp.rootDistributionParam = self.get_value(j.get("RootDistributionParam", 0))
         sp.plantDensity = int(self.get_value(j.get("PlantDensity", 0)))
         sp.rootGrowthLag = self.get_value(j.get("RootGrowthLag", 0))
-        sp.minimumTemperatureRootGrowth = self.get_value(j.get("MinimumTemperatureRootGrowth", 0))
+        sp.minimumTemperatureRootGrowth = self.get_value(
+            j.get("MinimumTemperatureRootGrowth", 0)
+        )
         sp.initialRootingDepth = self.get_value(j.get("InitialRootingDepth", 0))
         sp.rootPenetrationRate = self.get_value(j.get("RootPenetrationRate", 0))
         sp.rootFormFactor = self.get_value(j.get("RootFormFactor", 0))
         sp.specificRootLength = self.get_value(j.get("SpecificRootLength", 0))
         sp.stageAfterCut = int(self.get_value(j.get("StageAfterCut", 0)))
-        sp.limitingTemperatureHeatStress = self.get_value(j.get("LimitingTemperatureHeatStress", 0))
+        sp.limitingTemperatureHeatStress = self.get_value(
+            j.get("LimitingTemperatureHeatStress", 0)
+        )
         sp.cuttingDelayDays = int(self.get_value(j.get("CuttingDelayDays", 0)))
-        sp.droughtImpactOnFertilityFactor = self.get_value(j.get("DroughtImpactOnFertilityFactor", 0))
+        sp.droughtImpactOnFertilityFactor = self.get_value(
+            j.get("DroughtImpactOnFertilityFactor", 0)
+        )
 
         sp.efMono = self.get_value(j.get("EF_MONO", 0.5))
         sp.efMonos = self.get_value(j.get("EF_MONOS", 0.5))
@@ -133,7 +181,9 @@ class Crop(crop_capnp.Crop.Server):
         sp.kc25 = self.get_value(j.get("KC25", 460))
         sp.ko25 = self.get_value(j.get("KO25", 330))
 
-        sp.transitionStageLeafExp = int(self.get_value(j.get("TransitionStageLeafExp", -1)))
+        sp.transitionStageLeafExp = int(
+            self.get_value(j.get("TransitionStageLeafExp", -1))
+        )
 
         return sp
 
@@ -151,26 +201,54 @@ class Crop(crop_capnp.Crop.Server):
 
         cp.cropHeightP1 = self.get_value(j.get("CropHeightP1", 0))
         cp.cropHeightP2 = self.get_value(j.get("CropHeightP2", 0))
-        cp.cropSpecificMaxRootingDepth = self.get_value(j.get("CropSpecificMaxRootingDepth", 0))
+        cp.cropSpecificMaxRootingDepth = self.get_value(
+            j.get("CropSpecificMaxRootingDepth", 0)
+        )
 
-        cp.assimilatePartitioningCoeff = self.get_value(j.get("AssimilatePartitioningCoeff", []), expected_val_dim=2)
-        cp.organSenescenceRate = self.get_value(j.get("OrganSenescenceRate", []), expected_val_dim=2)
+        cp.assimilatePartitioningCoeff = self.get_value(
+            j.get("AssimilatePartitioningCoeff", []), expected_val_dim=2
+        )
+        cp.organSenescenceRate = self.get_value(
+            j.get("OrganSenescenceRate", []), expected_val_dim=2
+        )
 
-        cp.baseDaylength = self.get_value(j.get("BaseDaylength", []), expected_val_dim=1)
-        cp.optimumTemperature = self.get_value(j.get("OptimumTemperature", []), expected_val_dim=1)
-        cp.daylengthRequirement = self.get_value(j.get("DaylengthRequirement", []), expected_val_dim=1)
-        cp.droughtStressThreshold = self.get_value(j.get("DroughtStressThreshold", []), expected_val_dim=1)
-        cp.specificLeafArea = self.get_value(j.get("SpecificLeafArea", []), expected_val_dim=1)
-        cp.stageKcFactor = self.get_value(j.get("StageKcFactor", []), expected_val_dim=1)
-        cp.stageTemperatureSum = self.get_value(j.get("StageTemperatureSum", []), expected_val_dim=1)
-        cp.vernalisationRequirement = self.get_value(j.get("VernalisationRequirement", []), expected_val_dim=1)
+        cp.baseDaylength = self.get_value(
+            j.get("BaseDaylength", []), expected_val_dim=1
+        )
+        cp.optimumTemperature = self.get_value(
+            j.get("OptimumTemperature", []), expected_val_dim=1
+        )
+        cp.daylengthRequirement = self.get_value(
+            j.get("DaylengthRequirement", []), expected_val_dim=1
+        )
+        cp.droughtStressThreshold = self.get_value(
+            j.get("DroughtStressThreshold", []), expected_val_dim=1
+        )
+        cp.specificLeafArea = self.get_value(
+            j.get("SpecificLeafArea", []), expected_val_dim=1
+        )
+        cp.stageKcFactor = self.get_value(
+            j.get("StageKcFactor", []), expected_val_dim=1
+        )
+        cp.stageTemperatureSum = self.get_value(
+            j.get("StageTemperatureSum", []), expected_val_dim=1
+        )
+        cp.vernalisationRequirement = self.get_value(
+            j.get("VernalisationRequirement", []), expected_val_dim=1
+        )
 
         cp.heatSumIrrigationStart = self.get_value(j.get("HeatSumIrrigationStart", 0))
         cp.heatSumIrrigationEnd = self.get_value(j.get("HeatSumIrrigationEnd", 0))
 
-        cp.criticalTemperatureHeatStress = self.get_value(j.get("CriticalTemperatureHeatStress", 0))
-        cp.beginSensitivePhaseHeatStress = self.get_value(j.get("BeginSensitivePhaseHeatStress", 0))
-        cp.endSensitivePhaseHeatStress = self.get_value(j.get("EndSensitivePhaseHeatStress", 0))
+        cp.criticalTemperatureHeatStress = self.get_value(
+            j.get("CriticalTemperatureHeatStress", 0)
+        )
+        cp.beginSensitivePhaseHeatStress = self.get_value(
+            j.get("BeginSensitivePhaseHeatStress", 0)
+        )
+        cp.endSensitivePhaseHeatStress = self.get_value(
+            j.get("EndSensitivePhaseHeatStress", 0)
+        )
 
         cp.frostHardening = self.get_value(j.get("FrostHardening", 0))
         cp.frostDehardening = self.get_value(j.get("FrostDehardening", 0))
@@ -182,22 +260,31 @@ class Crop(crop_capnp.Crop.Server):
             {
                 "organId": yc.get("organId", -1),
                 "yieldPercentage": yc.get("yieldPercentage", 0),
-                "yieldDryMatter": yc.get("yieldDryMatter", 0)
-            } for yc in self.get_value(j.get("OrganIdsForPrimaryYield", []), expected_val_dim=1)
+                "yieldDryMatter": yc.get("yieldDryMatter", 0),
+            }
+            for yc in self.get_value(
+                j.get("OrganIdsForPrimaryYield", []), expected_val_dim=1
+            )
         ]
         cp.organIdsForSecondaryYield = [
             {
                 "organId": yc.get("organId", -1),
                 "yieldPercentage": yc.get("yieldPercentage", 0),
-                "yieldDryMatter": yc.get("yieldDryMatter", 0)
-            } for yc in self.get_value(j.get("OrganIdsForSecondaryYield", []), expected_val_dim=1)
+                "yieldDryMatter": yc.get("yieldDryMatter", 0),
+            }
+            for yc in self.get_value(
+                j.get("OrganIdsForSecondaryYield", []), expected_val_dim=1
+            )
         ]
         cp.organIdsForCutting = [
             {
                 "organId": yc.get("organId", -1),
                 "yieldPercentage": yc.get("yieldPercentage", 0),
-                "yieldDryMatter": yc.get("yieldDryMatter", 0)
-            } for yc in self.get_value(j.get("OrganIdsForCutting", []), expected_val_dim=1)
+                "yieldDryMatter": yc.get("yieldDryMatter", 0),
+            }
+            for yc in self.get_value(
+                j.get("OrganIdsForCutting", []), expected_val_dim=1
+            )
         ]
 
         cp.earlyRefLeafExp = self.get_value(j.get("EarlyRefLeafExp", 12))
@@ -218,10 +305,14 @@ class Crop(crop_capnp.Crop.Server):
         rp.residueType = self.get_value(j.get("residueType", ""))
 
         ps.aomDryMatterContent = self.get_value(j.get("AOM_DryMatterContent", 0))
-        ps.aomFastDecCoeffStandard = self.get_value(j.get("AOM_FastDecCoeffStandard", 0))
+        ps.aomFastDecCoeffStandard = self.get_value(
+            j.get("AOM_FastDecCoeffStandard", 0)
+        )
         ps.aomNH4Content = self.get_value(j.get("AOM_NH4Content", 0))
         ps.aomNO3Content = self.get_value(j.get("AOM_NO3Content", 0))
-        ps.aomSlowDecCoeffStandard = self.get_value(j.get("AOM_SlowDecCoeffStandard", 0))
+        ps.aomSlowDecCoeffStandard = self.get_value(
+            j.get("AOM_SlowDecCoeffStandard", 0)
+        )
         ps.cnRatioAOMFast = self.get_value(j.get("CN_Ratio_AOM_Fast", 0))
         ps.cnRatioAOMSlow = self.get_value(j.get("CN_Ratio_AOM_Slow", 0))
         ps.nConcentration = self.get_value(j.get("NConcentration", 0))
@@ -232,10 +323,14 @@ class Crop(crop_capnp.Crop.Server):
 
         return rp
 
-    async def species_context(self, context):  # species     @2 () -> (info :Common.IdInformation);
+    async def species_context(
+        self, context
+    ):  # species     @2 () -> (info :Common.IdInformation);
         context.results.info = self._species_info
 
-    async def cultivar_context(self, context):  # cultivar    @1 () -> (info :Common.IdInformation);
+    async def cultivar_context(
+        self, context
+    ):  # cultivar    @1 () -> (info :Common.IdInformation);
         context.results.info = self._cultivar_info
 
     @property
@@ -257,7 +352,7 @@ class Crop(crop_capnp.Crop.Server):
                 self._params.residueParams = self.create_residue_params(j)
 
             # update name in entry to match the one in the file
-            #if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
+            # if cps.cultivarParams and len(cps.cultivarParams.cultivarId) > 0:
             #    self._entry_ref.name = cps.cultivarParams.cultivarId
 
         return self._params
@@ -267,7 +362,6 @@ class Crop(crop_capnp.Crop.Server):
 
 
 class Service(crop_capnp.Service.Server):
-
     def __init__(self, path_to_monica_parameters, id=None, name=None, description=None):
         self._id = id if id else str(uuid.uuid4())
         self._name = name if name else id
@@ -275,12 +369,17 @@ class Service(crop_capnp.Service.Server):
         self._path_to_monica_params = path_to_monica_parameters
 
         self._species_to_cultivars = defaultdict(
-            list)  # list of cultivars for a given species { species: "", ref: Crop capability } which lazily load the actual parameters on first call
+            list
+        )  # list of cultivars for a given species { species: "", ref: Crop capability } which lazily load the actual parameters on first call
 
         crops_path = Path(self._path_to_monica_params) / "crops"
         for species_name in os.listdir(crops_path):
             species_path = crops_path / species_name
-            residue_path = Path(self._path_to_monica_params) / "crop-residues" / (species_name + ".json")
+            residue_path = (
+                Path(self._path_to_monica_params)
+                / "crop-residues"
+                / (species_name + ".json")
+            )
             if os.path.isdir(species_path):
                 for cult_fname in os.listdir(species_path):
                     cult_name = cult_fname[:-5]
@@ -289,12 +388,17 @@ class Service(crop_capnp.Service.Server):
                     cult_path = species_path / cult_fname
                     if not os.path.isdir(cult_path):
                         entry = reg_capnp.Registry.Entry(
-                            categoryId=species_name,
-                            name=cult_name
+                            categoryId=species_name, name=cult_name
                         )
-                        crop = Crop({"id": species_name, "name": species_name}, str(species_path) + ".json",
-                                    {"id": cult_name, "name": cult_name}, str(cult_path), str(residue_path), #entry,
-                                    id=species_name + "_" + cult_name, name=species_name + "/" + cult_name)
+                        crop = Crop(
+                            {"id": species_name, "name": species_name},
+                            str(species_path) + ".json",
+                            {"id": cult_name, "name": cult_name},
+                            str(cult_path),
+                            str(residue_path),  # entry,
+                            id=species_name + "_" + cult_name,
+                            name=species_name + "/" + cult_name,
+                        )
                         entry.ref = crop
                         self._species_to_cultivars[species_name].append(entry)
 
@@ -304,27 +408,45 @@ class Service(crop_capnp.Service.Server):
         r.name = self._name
         r.description = self._description
 
-    async def supportedCategories_context(self, context):  # supportedCategories @0 () -> (cats :List(Common.IdInformation));
+    async def supportedCategories_context(
+        self, context
+    ):  # supportedCategories @0 () -> (cats :List(Common.IdInformation));
         species_names = list(self._species_to_cultivars.keys())
         species_names.sort()
-        context.results.cats = list([{"id": name, "name": name} for name in species_names])
+        context.results.cats = list(
+            [{"id": name, "name": name} for name in species_names]
+        )
 
-    async def categoryInfo_context(self, context):  # categoryInfo @1 (categoryId :Text) -> Common.IdInformation;
+    async def categoryInfo_context(
+        self, context
+    ):  # categoryInfo @1 (categoryId :Text) -> Common.IdInformation;
         cat_id = context.params.categoryId
         if cat_id in self._species_to_cultivars:
             context.results.id = cat_id
             context.results.name = cat_id
 
-    async def entries_context(self, context):  # entries @2 (categoryId :Text) -> (entries :List(Entry));
+    async def entries_context(
+        self, context
+    ):  # entries @2 (categoryId :Text) -> (entries :List(Entry));
         cat_id = context.params.categoryId
         if cat_id in self._species_to_cultivars:
             context.results.entries = self._species_to_cultivars[cat_id]
         elif cat_id is None or len(cat_id) == 0:
-            context.results.entries = list(itertools.chain(*self._species_to_cultivars.values()))
+            context.results.entries = list(
+                itertools.chain(*self._species_to_cultivars.values())
+            )
 
 
-async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, port=None,
-               id=None, name="MONICA Crop Parameters Service", description=None, srt=None):
+async def main(
+    path_to_monica_parameters=None,
+    serve_bootstrap=True,
+    host=None,
+    port=None,
+    id=None,
+    name="MONICA Crop Parameters Service",
+    description=None,
+    srt=None,
+):
     config = {
         "path_to_monica_parameters": path_to_monica_parameters,
         "port": port,
@@ -337,13 +459,17 @@ async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, 
         # "capnp://jXS22bpAGSjfksa0JkDI_092-h-bdZi4lKNBBgD7kWk=@10.10.24.218:40305/ZGVjODYxYWQtZmVkOS00YjEzLWJmNjQtNWU0OGRmYzhhYmZh",
         "service_container_sr": None,
         # "capnp://jXS22bpAGSjfksa0JkDI_092-h-bdZi4lKNBBgD7kWk=@10.10.24.218:40305/ZGVjODYxYWQtZmVkOS00YjEzLWJmNjQtNWU0OGRmYzhhYmZh"
-        "srt": srt
+        "srt": srt,
     }
     common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
 
     restorer = common.Restorer()
-    service = Service(config["path_to_monica_parameters"],
-                       id=config["id"], name=config["name"], description=config["description"])
+    service = Service(
+        config["path_to_monica_parameters"],
+        id=config["id"],
+        name=config["name"],
+        description=config["description"],
+    )
 
     name_to_service = {"service": service}
 
@@ -360,29 +486,49 @@ async def main(path_to_monica_parameters=None, serve_bootstrap=True, host=None, 
     async def load_last_or_store_services(service_container, name, service):
         (storage_key, restore_token) = {
             "service": (LAST_SERVICE_SR_KEY_NAME, SERVICE_ITSELF_RESTORE_TOKEN),
-            "admin": (LAST_ADMIN_SR_KEY_NAME, ADMIN_RESTORE_TOKEN)
+            "admin": (LAST_ADMIN_SR_KEY_NAME, ADMIN_RESTORE_TOKEN),
         }[name]
         entry_prom = service_container.getEntry(key=storage_key).entry
         entry_val = entry_prom.getValue().wait()
-        if entry_val.isUnset:  # there was no set last token, so we need to create a new one
-            save_res = await restorer.save_str(service, create_unsave=False, restore_token=restore_token,
-                                         store_sturdy_refs=True)
+        if (
+            entry_val.isUnset
+        ):  # there was no set last token, so we need to create a new one
+            save_res = await restorer.save_str(
+                service,
+                create_unsave=False,
+                restore_token=restore_token,
+                store_sturdy_refs=True,
+            )
             service_sr = save_res["sturdy_ref"]
             # keep the sturdy ref around for output to the user
             # and save the actual token as the one we used
-            if entry_prom.setValue(value={"textValue": save_res["sr_token"]}).wait().success:
+            if (
+                entry_prom.setValue(value={"textValue": save_res["sr_token"]})
+                .wait()
+                .success
+            ):
                 return service_sr
         else:  # there was a previously stored token, so just create a sturdy ref for output from it
             service_sr_token = entry_val.value.textValue
-            save_res = await restorer.save_str(service, fixed_sr_token=service_sr_token, create_unsave=False,
-                                         store_sturdy_refs=False)
+            save_res = await restorer.save_str(
+                service,
+                fixed_sr_token=service_sr_token,
+                create_unsave=False,
+                store_sturdy_refs=False,
+            )
             return save_res["sturdy_ref"]
 
-    await serv.init_and_run_service(name_to_service, config["host"], config["port"],
-                                    serve_bootstrap=config["serve_bootstrap"], restorer=restorer,
-                                    name_to_service_srs={"service": config["srt"]},
-                                    restorer_container_sr=config["restorer_container_sr"])#,
-                                    #service_container_sr=config["service_container_sr"])
+    await serv.init_and_run_service(
+        name_to_service,
+        config["host"],
+        config["port"],
+        serve_bootstrap=config["serve_bootstrap"],
+        restorer=restorer,
+        name_to_service_srs={"service": config["srt"]},
+        restorer_container_sr=config["restorer_container_sr"],
+    )  # ,
+    # service_container_sr=config["service_container_sr"])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(capnp.run(main(serve_bootstrap=True)))

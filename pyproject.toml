@@ -24,3 +24,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 zalfmas-common = {path = "../mas_python_common", develop = true}
 #zalfmas-capnp-schemas = {path = "../mas_capnproto_schemas", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.10"

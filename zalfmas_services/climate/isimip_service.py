@@ -39,8 +39,12 @@ from pkgs.climate import csv_file_based as csv_based
 
 PATH_TO_CAPNP_SCHEMAS = PATH_TO_REPO / "capnproto_schemas"
 abs_imports = [str(PATH_TO_CAPNP_SCHEMAS)]
-reg_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports)
-climate_data_capnp = capnp.load(str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports)
+reg_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "registry.capnp"), imports=abs_imports
+)
+climate_data_capnp = capnp.load(
+    str(PATH_TO_CAPNP_SCHEMAS / "climate.capnp"), imports=abs_imports
+)
 
 
 def create_meta_plus_datasets(path_to_data_dir, interpolator, rowcol_to_latlon):
@@ -63,16 +67,32 @@ def create_meta_plus_datasets(path_to_data_dir, interpolator, rowcol_to_latlon):
 
                 metadata = climate_data_capnp.Metadata.new_message(entries=entries)
                 metadata.info = ccdi.MetadataInfo(metadata)
-                datasets.append(climate_data_capnp.MetaPlusData.new_message(
-                    meta=metadata,
-                    data=csv_based.Dataset(metadata, scen_dir, interpolator, rowcol_to_latlon,
-                                           row_col_pattern="row-{row}/col-{col}.csv.gz")
-                ))
+                datasets.append(
+                    climate_data_capnp.MetaPlusData.new_message(
+                        meta=metadata,
+                        data=csv_based.Dataset(
+                            metadata,
+                            scen_dir,
+                            interpolator,
+                            rowcol_to_latlon,
+                            row_col_pattern="row-{row}/col-{col}.csv.gz",
+                        ),
+                    )
+                )
     return datasets
 
 
-async def main(path_to_data, serve_bootstrap=False, host=None, port=None,
-               reg_sturdy_ref=None, id=None, name="ISIMIP AgMIP Phase3", description=None, srt=None):
+async def main(
+    path_to_data,
+    serve_bootstrap=False,
+    host=None,
+    port=None,
+    reg_sturdy_ref=None,
+    id=None,
+    name="ISIMIP AgMIP Phase3",
+    description=None,
+    srt=None,
+):
     config = {
         "path_to_data": path_to_data,
         "host": host,
@@ -83,19 +103,33 @@ async def main(path_to_data, serve_bootstrap=False, host=None, port=None,
         "reg_sturdy_ref": reg_sturdy_ref,
         "serve_bootstrap": str(serve_bootstrap),
         "reg_category": "climate",
-        "srt": srt
+        "srt": srt,
     }
     common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
 
-    interpolator, rowcol_to_latlon = ccdi.create_lat_lon_interpolator_from_json_coords_file(
-        config["path_to_data"] + "/" + "latlon-to-rowcol.json")
-    meta_plus_data = create_meta_plus_datasets(config["path_to_data"], interpolator, rowcol_to_latlon)
-    service = ccdi.Service(meta_plus_data, id=config["id"], name=config["name"], description=config["description"])
+    interpolator, rowcol_to_latlon = (
+        ccdi.create_lat_lon_interpolator_from_json_coords_file(
+            config["path_to_data"] + "/" + "latlon-to-rowcol.json"
+        )
+    )
+    meta_plus_data = create_meta_plus_datasets(
+        config["path_to_data"], interpolator, rowcol_to_latlon
+    )
+    service = ccdi.Service(
+        meta_plus_data,
+        id=config["id"],
+        name=config["name"],
+        description=config["description"],
+    )
 
-    await serv.init_and_run_service({"service": service}, config["host"], config["port"],
-                                    serve_bootstrap=config["serve_bootstrap"],
-                                    name_to_service_srs={"service": config["srt"]})
+    await serv.init_and_run_service(
+        {"service": service},
+        config["host"],
+        config["port"],
+        serve_bootstrap=config["serve_bootstrap"],
+        name_to_service_srs={"service": config["srt"]},
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(capnp.run(main("/beegfs/common/data/climate/isimip/AgMIP.input_csvs")))
