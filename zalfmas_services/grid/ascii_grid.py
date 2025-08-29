@@ -11,75 +11,24 @@
 # Maintainers:
 # Currently maintained by the authors.
 #
-# This file is part of the util library used by models created at the Institute of
-# Landscape Systems Analysis at the ZALF.
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
-
-# remote debugging via commandline
-# -m ptvsd --host 0.0.0.0 --port 14000 --wait
 
 import asyncio
 import capnp
 import math
 import os
-from pathlib import Path
 from pyproj import Transformer
 import sys
-
-# import time
 import uuid
 
-from zalfmas_common.climate import common_climate_data_capnp_impl as ccdi
 from zalfmas_common import common
 from zalfmas_common import service as serv
-from zalfmas_common.climate import csv_file_based as csv_based
-from zalfmas_common import fbp
 from zalfmas_common import geo
 from zalfmas_common import rect_ascii_grid_management as grid_man
 import zalfmas_capnp_schemas
 
 sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
-import climate_capnp
-import registry_capnp as reg_capnp
-import common_capnp
-import fbp_capnp
-import geo_capnp
 import grid_capnp
-
-
-def fbp_wrapper(config, service: grid_capnp.Grid):
-    ports, close_out_ports = fbp.connect_ports(config)
-
-    try:
-        while ports["in"] and ports["out"] and service:
-            in_msg = ports["in"].read().wait()
-            if in_msg.which() == "done":
-                ports["in"] = None
-                continue
-
-            in_ip = in_msg.value.as_struct(fbp_capnp.IP)
-            attr = common.get_fbp_attr(in_ip, config["from_attr"])
-            if attr:
-                coord = attr.as_struct(geo_capnp.LatLonCoord)
-            else:
-                coord = in_ip.content.as_struct(geo_capnp.LatLonCoord)
-
-            val = service.closestValueAt(coord).wait().val
-
-            out_ip = fbp_capnp.IP.new_message()
-            if not config["to_attr"]:
-                out_ip.content = val
-            common.copy_and_set_fbp_attrs(
-                in_ip, out_ip, **({config["to_attr"]: val} if config["to_attr"] else {})
-            )
-            ports["out"].write(value=out_ip).wait()
-
-    except Exception as e:
-        print(f"{os.path.basename(__file__)} Exception :", e)
-
-    close_out_ports()
-    print(f"{os.path.basename(__file__)}: process finished")
-
 
 class RectMeterGrid(
     grid_capnp.Grid.Server,
@@ -143,7 +92,7 @@ class RectMeterGrid(
         self._ncols = int(self._metadata["ncols"])
         self._nodata = (
             int(self._metadata["nodata_value"])
-            if self._val_type == int
+            if self._val_type is int
             else float(self._metadata["nodata_value"])
         )
         self._xll = int(self._metadata["xllcorner"])
@@ -152,7 +101,7 @@ class RectMeterGrid(
     def to_union(self, value):
         if value == self._nodata:
             val = {"no": True}
-        elif self._val_type == int:
+        elif self._val_type is int:
             val = {"i": int(value)}
         else:
             val = {"f": float(value)}
@@ -519,7 +468,7 @@ class RectMeterGrid(
     async def noDataValue(self, **kwargs):  # noDataValue @3 () -> (nodata :Value);
         return (
             {"i": int(self._metadata["nodata_value"])}
-            if self._val_type == int
+            if self._val_type is int
             else {"f": float(self._metadata["nodata_value"])}
         )
 
@@ -561,6 +510,7 @@ async def main(
     name="Grid Service",
     description=None,
     srt=None,
+    return_service=False,
 ):
     config = {
         "path_to_ascii_grid": path_to_ascii_grid,
@@ -572,11 +522,6 @@ async def main(
         "name": name,
         "description": description,
         "serve_bootstrap": serve_bootstrap,
-        "fbp": False,
-        "in_sr": None,
-        "out_sr": None,
-        "from_attr": None,  # "latlon"
-        "to_attr": None,  # "dgm",
         "srt": srt,
     }
     common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
@@ -591,9 +536,8 @@ async def main(
         description=config["description"],
         restorer=restorer,
     )
-    if config["fbp"]:
-        fbp_wrapper(config, grid_capnp.Grid._new_client(service))
-
+    if return_service:
+        return grid_capnp.Grid._new_client(service)
     else:
         await serv.init_and_run_service(
             {"service": service},
