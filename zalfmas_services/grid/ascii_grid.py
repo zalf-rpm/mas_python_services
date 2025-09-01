@@ -17,7 +17,7 @@ import asyncio
 import capnp
 import math
 import os
-from pyproj import Transformer
+from pyproj import CRS, Transformer
 import sys
 import uuid
 
@@ -499,61 +499,28 @@ class RectMeterGrid(
         )
 
 
-async def main(
-    path_to_ascii_grid=None,
-    grid_crs=None,
-    val_type=None,
-    serve_bootstrap=True,
-    host=None,
-    port=None,
-    id=None,
-    name="Grid Service",
-    description=None,
-    srt=None,
-    return_service=False,
-):
-    config = {
-        "path_to_ascii_grid": path_to_ascii_grid,
-        "grid_crs": grid_crs,
-        "val_type": val_type,
-        "port": port,
-        "host": host,
-        "id": id,
-        "name": name,
-        "description": description,
-        "serve_bootstrap": serve_bootstrap,
-        "srt": srt,
-    }
-    common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
+async def main():
+    parser = serv.create_default_args_parser("ASCII Grid Service")
+    config, _ = serv.handle_default_service_args(parser, path_to_service_py=__file__)
+
+    cs = config["service"]
 
     restorer = common.Restorer()
+    if "epsg_code" in cs:
+        crs = CRS.from_epsg(cs["epsg_code"])
+    else:
+        crs = geo.name_to_crs(cs["grid_crs"])
     service = RectMeterGrid(
-        path_to_ascii_grid=config["path_to_ascii_grid"],
-        grid_crs=geo.name_to_crs(config["grid_crs"]),
-        val_type=int if config["val_type"] == "int" else float,
-        id=config["id"],
-        name=config["name"],
-        description=config["description"],
+        path_to_ascii_grid=cs["path_to_ascii_grid"],
+        grid_crs=crs,
+        val_type=int if cs["val_type"] == "int" else float,
+        id=cs.get("id"),
+        name=cs.get("name"),
+        description=cs.get("description"),
         restorer=restorer,
     )
-    if return_service:
-        return grid_capnp.Grid._new_client(service)
-    else:
-        await serv.init_and_run_service(
-            {"service": service},
-            config["host"],
-            config["port"],
-            serve_bootstrap=config["serve_bootstrap"],
-            name_to_service_srs={"service": config["srt"]},
-            restorer=restorer,
-        )
+    await serv.init_and_run_service_from_config(config=config, service=service, restorer=restorer)
 
 
 if __name__ == "__main__":
-    # grid = "data/geo/dem_1000_31469_gk5.asc"
-    # grid = str(Path(zalfmas_capnp_schemas.__file__).parent.parent / "data/geo/slope_1000_31469_gk5.asc")
-    # crs = "gk5"
-    # asyncio.run(capnp.run(main(grid, crs, "float", serve_bootstrap=True)))
-    # asyncio.run(capnp.run(main(path_to_ascii_grid="/home/berg/GitHub/klimertrag_2/data/germany/buek200_1000_25832_etrs89-utm32n.asc",
-    #                           srt="soil", grid_crs="utm32n", val_type="int", serve_bootstrap=True, port=9901)))
-    asyncio.run(capnp.run(main(serve_bootstrap=True)))
+    asyncio.run(capnp.run(main()))

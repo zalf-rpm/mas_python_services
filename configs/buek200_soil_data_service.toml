@@ -1,0 +1,30 @@
+[service]
+id = "5bdb558a-7308-4be0-888d-3836bcf1e7cc"
+name = "BÜK200 Soil Data Service"
+description = "Serve soil profiles from the BÜK200 german soil map."
+path_to_sqlite_db = "/home/berg/GitHub/mas-infrastructure/data/soil/buek200.sqlite"
+path_to_ascii_soil_grid = "/home/berg/GitHub/mas-infrastructure/data/soil/buek200_1000_25832_etrs89-utm32n.asc"
+#grid_crs = "utm32n" # latlon | wgs84 | gk3 | gk4 | gk5 | utm21s | utm32n
+epsg_code = 25832
+#fixed_sturdy_ref_token = "buek200"
+# sturdy ref to a container which is used by the service to store it's data/state etc.
+#storage_container_sr = "capnp://the_host_key@host:port/a_sturdy_ref_token"
+
+# at which registries the current service should be registered, might be only one
+#[[service.registries]]
+#name = "SQLite Soil Data Service"
+#category_id = "soils"
+# sturdy ref to a registry where the service should be registered at
+#sturdy_ref = "capnp://the_host_key@host:port/a_sturdy_ref_token"
+
+[vat]
+#host = "localhost"
+#port = "9999"
+serve_bootstrap = true
+# sturdy ref to container used for the restorer serving the vat
+#restorer_container_sr = "sturdy ref"
+
+# at which resolvers should the vat be registered under the current vat id and optional alias
+#[[vat.resolvers]]
+#sturdy_ref = "sturdy ref"
+#alias = "buek200"

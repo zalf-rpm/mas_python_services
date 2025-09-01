@@ -11,13 +11,10 @@
 # Maintainers:
 # Currently maintained by the authors.
 #
-# This file is part of the util library used by models created at the Institute of
-# Landscape Systems Analysis at the ZALF.
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import asyncio
 import capnp
-import json
 import os
 from pathlib import Path
 from pyproj import CRS
@@ -34,62 +31,7 @@ from zalfmas_common.soil import soil_io
 import zalfmas_capnp_schemas
 
 sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
-import fbp_capnp
-import geo_capnp
 import soil_capnp
-
-
-def fbp_wrapper(config, service: soil_capnp.Service):
-    conman = common.ConnectionManager()
-    inp = conman.try_connect(
-        config["in_sr"], cast_as=fbp_capnp.Channel.Reader, retry_secs=1
-    )
-    outp = conman.try_connect(
-        config["out_sr"], cast_as=fbp_capnp.Channel.Writer, retry_secs=1
-    )
-    mandatory = json.loads(config["mandatory"])
-
-    try:
-        if inp and outp and service:
-            while True:
-                in_msg = inp.read().wait()
-                if in_msg.which() == "done":
-                    break
-
-                in_ip = in_msg.value.as_struct(fbp_capnp.IP)
-                attr = common.get_fbp_attr(in_ip, config["from_attr"])
-                if attr:
-                    coord = attr.as_struct(geo_capnp.LatLonCoord)
-                else:
-                    coord = in_ip.content.as_struct(geo_capnp.LatLonCoord)
-
-                profiles = (
-                    service.profilesAt(
-                        coord, {"mandatory": mandatory, "onlyRawData": False}
-                    )
-                    .wait()
-                    .profiles
-                )
-                if len(profiles) > 0:
-                    profile = profiles[0]
-
-                    out_ip = fbp_capnp.IP.new_message()
-                    if not config["to_attr"]:
-                        out_ip.content = profile
-                    common.copy_and_set_fbp_attrs(
-                        in_ip,
-                        out_ip,
-                        **({config["to_attr"]: profile} if config["to_attr"] else {}),
-                    )
-                    outp.write(value=out_ip).wait()
-
-            outp.write(done=None).wait()
-
-    except Exception as e:
-        print("sqlite_soil_data_service.py ex:", e)
-
-    print("dwd_germany_service.py: exiting FBP component")
-
 
 def set_capnp_prop_name_via_monica_name(param, name, value=None):
     """set the correct union parameter in capnp Parameters struct object
@@ -471,7 +413,7 @@ class Service(
         )
 
         def create_profiles(lat, lon):
-            profiles = self.profiles_at(lat, lon, avail_props, query.onlyRawData)
+            profiles = self.profiles_at(lat, lon, avail_props, ps.onlyRawData)
             return profiles
 
         profiles_gen = (
@@ -496,81 +438,49 @@ class Stream(soil_capnp.Service.Stream.Server):
         return ps
 
 
-async def main(
-    path_to_sqlite_db=None,
-    path_to_ascii_soil_grid=None,
-    grid_crs=None,
-    grid_epsg=None,
-    serve_bootstrap=True,
-    host=None,
-    port=None,
-    id=None,
-    name="Soil service",
-    description=None,
-    srt=None,
-):
-    config = {
-        "path_to_sqlite_db": path_to_sqlite_db,
-        "path_to_ascii_soil_grid": path_to_ascii_soil_grid,
-        "grid_crs": grid_crs,
-        "grid_epsg": grid_epsg,
-        "port": port,
-        "host": host,
-        "id": id,
-        "name": name,
-        "description": description,
-        "serve_bootstrap": serve_bootstrap,
-        "fbp": False,
-        "in_sr": None,
-        "out_sr": None,
-        "mandatory": """["soilType","organicCarbon","rawDensity"]""",
-        "to_attr": None,  # "soil",
-        "from_attr": None,  # "latlon"
-        "srt": srt,
-    }
-    common.update_config(config, sys.argv, print_config=True, allow_new_keys=False)
+async def main():
+    parser = serv.create_default_args_parser("SQLite Soil Data Service")
+    config, _ = serv.handle_default_service_args(parser, path_to_service_py=__file__)
 
-    if config["grid_epsg"]:
-        grid_crs = CRS.from_epsg(int(config["grid_epsg"]))
-    elif config["grid_crs"]:
-        grid_crs = geo.name_to_crs(config["grid_crs"])
-    else:
-        try:
-            epsg = int(Path(config["path_to_ascii_soil_grid"]).name.split("_")[2])
-            grid_crs = CRS.from_epsg(epsg)
-        except:
-            print(
-                "Couldn't create CRS from soil grid name:",
-                config["path_to_ascii_soil_grid"],
-            )
-            exit(0)
+    cs = config["service"]
 
-    if not config["path_to_sqlite_db"]:
+    if "path_to_sqlite_db" not in cs:
         print("No path to sqlite db given.")
+        exit(0)
+    if "path_to_ascii_soil_grid" not in cs:
+        print("No path to ascii soil grid given.")
         exit(0)
 
     restorer = common.Restorer()
+    if "epsg_code" in cs:
+        crs = CRS.from_epsg(cs["epsg_code"])
+    elif "grid_crs" in cs:
+        crs = geo.name_to_crs(cs["grid_crs"])
+    else:
+        try:
+            epsg = int(Path(cs["path_to_ascii_soil_grid"]).name.split("_")[2])
+            crs = CRS.from_epsg(epsg)
+        except Exception:
+            print(
+                "Couldn't create CRS from soil grid name:",
+                cs["path_to_ascii_soil_grid"],
+            )
+            exit(0)
+
+    restorer = common.Restorer()
     service = Service(
-        path_to_sqlite_db=config["path_to_sqlite_db"],
-        path_to_ascii_grid=config["path_to_ascii_soil_grid"],
-        grid_crs=grid_crs,
-        id=config["id"],
-        name=config["name"],
-        description=config["description"],
+        path_to_sqlite_db=cs["path_to_sqlite_db"],
+        path_to_ascii_grid=cs["path_to_ascii_soil_grid"],
+        grid_crs=crs,
+        id=cs.get("id", None),
+        name=cs.get("name"),
+        description=cs.get("description"),
         restorer=restorer,
     )
-    if config["fbp"]:
-        fbp_wrapper(config, soil_capnp.Service._new_client(service))
-    else:
-        await serv.init_and_run_service(
-            {"service": service},
-            config["host"],
-            config["port"],
-            serve_bootstrap=config["serve_bootstrap"],
-            name_to_service_srs={"service": config["srt"]},
-            restorer=restorer,
-        )
+    await serv.init_and_run_service_from_config(
+        config=config, service=service, restorer=restorer
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(capnp.run(main(serve_bootstrap=True)))
+    asyncio.run(capnp.run(main()))
