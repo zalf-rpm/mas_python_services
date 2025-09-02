@@ -13,6 +13,7 @@
 #
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
+from collections import defaultdict
 import csv
 from datetime import date, timedelta
 import numpy as np
@@ -20,9 +21,15 @@ from pyproj import Transformer
 from scipy.interpolate import NearestNDInterpolator
 
 def read_data_and_create_seed_harvest_geo_grid_interpolator(
-    path_to_csv_file, wgs84_crs, target_crs, ilr_seed_harvest_data
+    crop_id, path_to_csv_file, wgs84_crs, target_crs
 ):
     """read seed/harvest dates and point climate stations"""
+
+    ilr_seed_harvest_data = {
+        "interpolate": None,
+        "data": defaultdict(dict),
+        "is-winter-crop": None,
+    }
 
     crop_id_to_is_wintercrop = {
         "WW": True,
@@ -69,34 +76,36 @@ def read_data_and_create_seed_harvest_geo_grid_interpolator(
                 points.append([r_geoTargetGrid, h_geoTargetGrid])
                 values.append(prev_cs)
 
-            crop_id = row[3]
+            if crop_id != row[3]:
+                print("Error:", path_to_csv_file, "seams to contain not only", crop_id, "data. Skipping line.")
+                continue
             is_wintercrop = crop_id_to_is_wintercrop[crop_id]
-            ilr_seed_harvest_data[crop_id]["is-winter-crop"] = is_wintercrop
+            ilr_seed_harvest_data["is-winter-crop"] = is_wintercrop
 
             base_date = date(2001, 1, 1)
 
             sdoy = int(float(row[4]))
-            ilr_seed_harvest_data[crop_id]["data"][cs]["sowing-doy"] = sdoy
+            ilr_seed_harvest_data["data"][cs]["sowing-doy"] = sdoy
             sd = base_date + timedelta(days=sdoy - 1)
-            ilr_seed_harvest_data[crop_id]["data"][cs]["sowing-date"] = {
+            ilr_seed_harvest_data["data"][cs]["sowing-date"] = {
                 "year": 0,
                 "month": sd.month,
                 "day": sd.day,
             }  # "0000-{:02d}-{:02d}".format(sd.month, sd.day)
 
             esdoy = int(float(row[8]))
-            ilr_seed_harvest_data[crop_id]["data"][cs]["earliest-sowing-doy"] = esdoy
+            ilr_seed_harvest_data["data"][cs]["earliest-sowing-doy"] = esdoy
             esd = base_date + timedelta(days=esdoy - 1)
-            ilr_seed_harvest_data[crop_id]["data"][cs]["earliest-sowing-date"] = {
+            ilr_seed_harvest_data["data"][cs]["earliest-sowing-date"] = {
                 "year": 0,
                 "month": esd.month,
                 "day": esd.day,
             }  # "0000-{:02d}-{:02d}".format(esd.month, esd.day)
 
             lsdoy = int(float(row[9]))
-            ilr_seed_harvest_data[crop_id]["data"][cs]["latest-sowing-doy"] = lsdoy
+            ilr_seed_harvest_data["data"][cs]["latest-sowing-doy"] = lsdoy
             lsd = base_date + timedelta(days=lsdoy - 1)
-            ilr_seed_harvest_data[crop_id]["data"][cs]["latest-sowing-date"] = {
+            ilr_seed_harvest_data["data"][cs]["latest-sowing-date"] = {
                 "year": 0,
                 "month": lsd.month,
                 "day": lsd.day,
@@ -107,27 +116,27 @@ def read_data_and_create_seed_harvest_geo_grid_interpolator(
                 digit = 2
 
             hdoy = int(float(row[6]))
-            ilr_seed_harvest_data[crop_id]["data"][cs]["harvest-doy"] = hdoy
+            ilr_seed_harvest_data["data"][cs]["harvest-doy"] = hdoy
             hd = base_date + timedelta(days=hdoy - 1)
-            ilr_seed_harvest_data[crop_id]["data"][cs]["harvest-date"] = {
+            ilr_seed_harvest_data["data"][cs]["harvest-date"] = {
                 "year": 0,
                 "month": hd.month,
                 "day": hd.day,
             }  # "000{}-{:02d}-{:02d}".format(digit, hd.month, hd.day)
 
             ehdoy = int(float(row[10]))
-            ilr_seed_harvest_data[crop_id]["data"][cs]["earliest-harvest-doy"] = ehdoy
+            ilr_seed_harvest_data["data"][cs]["earliest-harvest-doy"] = ehdoy
             ehd = base_date + timedelta(days=ehdoy - 1)
-            ilr_seed_harvest_data[crop_id]["data"][cs]["earliest-harvest-date"] = {
+            ilr_seed_harvest_data["data"][cs]["earliest-harvest-date"] = {
                 "year": digit,
                 "month": ehd.month,
                 "day": ehd.day,
             }  # "000{}-{:02d}-{:02d}".format(digit, ehd.month, ehd.day)
 
             lhdoy = int(float(row[11]))
-            ilr_seed_harvest_data[crop_id]["data"][cs]["latest-harvest-doy"] = lhdoy
+            ilr_seed_harvest_data["data"][cs]["latest-harvest-doy"] = lhdoy
             lhd = base_date + timedelta(days=lhdoy - 1)
-            ilr_seed_harvest_data[crop_id]["data"][cs]["latest-harvest-date"] = {
+            ilr_seed_harvest_data["data"][cs]["latest-harvest-date"] = {
                 "year": digit,
                 "month": lhd.month,
                 "day": lhd.day,
@@ -138,6 +147,7 @@ def read_data_and_create_seed_harvest_geo_grid_interpolator(
             prev_lat_lon = (lat, lon)
             prev_cs = cs
 
-        ilr_seed_harvest_data[crop_id]["interpolate"] = NearestNDInterpolator(
+        ilr_seed_harvest_data["interpolate"] = NearestNDInterpolator(
             np.array(points), np.array(values)
         )
+        return ilr_seed_harvest_data
