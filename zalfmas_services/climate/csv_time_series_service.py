@@ -15,6 +15,7 @@
 
 import asyncio
 import capnp
+import json
 import os
 from pathlib import Path
 import sys
@@ -56,7 +57,7 @@ async def main(
     if config["path_to_csv_file"]:
         pandas_csv_config = {
             "sep": config["csv_separator"],
-            "skiprows": config["csv_skip_rows"],
+            "skiprows": json.loads(config["csv_skip_rows"]),
             "decimal": config["csv_decimal"],
         }
         if config["csv_thousands"]:
