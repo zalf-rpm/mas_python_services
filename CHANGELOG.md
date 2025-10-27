@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.15](https://github.com/zalf-rpm/mas_python_services/compare/v0.1.14...v0.1.15) (2025-10-27)
+
+
+### Bug Fixes
+
+* add a bit of readme text as pypi doesnt allow empty markdown files ([9199d4b](https://github.com/zalf-rpm/mas_python_services/commit/9199d4bf7bd0744e9b74a9c8a2ac983dc01dd393))
+
 ## [0.1.14](https://github.com/zalf-rpm/mas_python_services/compare/v0.1.13...v0.1.14) (2025-10-27)
 
 
