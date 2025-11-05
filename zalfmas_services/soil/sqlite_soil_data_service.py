@@ -33,6 +33,7 @@ import zalfmas_capnp_schemas
 sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
 import soil_capnp
 
+
 def set_capnp_prop_name_via_monica_name(param, name, value=None):
     """set the correct union parameter in capnp Parameters struct object
     given the parameter name and optionally value"""

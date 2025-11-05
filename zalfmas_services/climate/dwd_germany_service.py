@@ -18,22 +18,16 @@
 import asyncio
 import capnp
 import os
-from pathlib import Path
 import sys
 
 from zalfmas_common.climate import common_climate_data_capnp_impl as ccdi
 from zalfmas_common import common
 from zalfmas_common import service as serv
 from zalfmas_common.climate import csv_file_based as csv_based
-import zalfmas_fbp as fbp
 import zalfmas_capnp_schemas
 
 sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
 import climate_capnp
-import common_capnp
-import fbp_capnp
-import geo_capnp
-import registry_capnp as reg_capnp
 
 
 def create_meta_plus_datasets(

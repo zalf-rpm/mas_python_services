@@ -22,8 +22,6 @@ from netCDF4 import Dataset as NCDataset
 import numpy as np
 import os
 from pathlib import Path
-from pyproj import Transformer
-from scipy.interpolate import NearestNDInterpolator
 import sys
 
 # remote debugging via commandline

@@ -20,11 +20,9 @@
 
 import asyncio
 import capnp
-import logging
 import os
 from pathlib import Path
 import socket
-import sqlite3
 import sys
 import uuid
 

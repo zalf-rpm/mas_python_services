@@ -30,6 +30,7 @@ import zalfmas_capnp_schemas
 sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
 import grid_capnp
 
+
 class RectMeterGrid(
     grid_capnp.Grid.Server,
     common.Identifiable,
@@ -519,7 +520,9 @@ async def main():
         description=cs.get("description"),
         restorer=restorer,
     )
-    await serv.init_and_run_service_from_config(config=config, service=service, restorer=restorer)
+    await serv.init_and_run_service_from_config(
+        config=config, service=service, restorer=restorer
+    )
 
 
 if __name__ == "__main__":

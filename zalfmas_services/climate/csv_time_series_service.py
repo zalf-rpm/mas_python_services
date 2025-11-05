@@ -17,7 +17,6 @@ import asyncio
 import capnp
 import json
 import os
-from pathlib import Path
 import sys
 from zalfmas_common import common
 from zalfmas_common import service as serv

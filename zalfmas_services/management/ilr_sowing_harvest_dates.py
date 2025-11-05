@@ -20,6 +20,7 @@ import numpy as np
 from pyproj import Transformer
 from scipy.interpolate import NearestNDInterpolator
 
+
 def read_data_and_create_seed_harvest_geo_grid_interpolator(
     crop_id, path_to_csv_file, wgs84_crs, target_crs
 ):
@@ -77,7 +78,13 @@ def read_data_and_create_seed_harvest_geo_grid_interpolator(
                 values.append(prev_cs)
 
             if crop_id != row[3]:
-                print("Error:", path_to_csv_file, "seams to contain not only", crop_id, "data. Skipping line.")
+                print(
+                    "Error:",
+                    path_to_csv_file,
+                    "seams to contain not only",
+                    crop_id,
+                    "data. Skipping line.",
+                )
                 continue
             is_wintercrop = crop_id_to_is_wintercrop[crop_id]
             ilr_seed_harvest_data["is-winter-crop"] = is_wintercrop

@@ -16,16 +16,13 @@
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import csv
-import json
-from datetime import date, timedelta
+from datetime import date
 import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
-from pyproj import CRS, Transformer
 from scipy.interpolate import NearestNDInterpolator
 import sys
-import time
 
 # import ptvsd
 # ptvsd.enable_attach(("0.0.0.0", 14000))
@@ -42,7 +39,6 @@ PATH_TO_PYTHON_CODE = PATH_TO_REPO / "src/python"
 if str(PATH_TO_PYTHON_CODE) not in sys.path:
     sys.path.insert(1, str(PATH_TO_PYTHON_CODE))
 
-import common.geo as geo
 
 import capnp
 from capnproto_schemas import (

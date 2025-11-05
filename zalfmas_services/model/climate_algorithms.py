@@ -16,16 +16,10 @@
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import capnp
-from datetime import date, timedelta
-import json
-import numpy as np
+from datetime import timedelta
 import os
-import pandas as pd
 from pathlib import Path
-from pyproj import CRS, Transformer
-from scipy.interpolate import NearestNDInterpolator
 import sys
-import time
 
 PATH_TO_REPO = Path(os.path.realpath(__file__)).parent.parent.parent.parent.parent
 if str(PATH_TO_REPO) not in sys.path:
