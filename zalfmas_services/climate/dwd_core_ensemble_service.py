@@ -16,20 +16,16 @@
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import asyncio
-import capnp
-import os
-from pathlib import Path
 import sys
-import tomli
+from pathlib import Path
 
-from zalfmas_common.climate import common_climate_data_capnp_impl as ccdi
+import capnp
+import tomli
+from zalfmas_capnp_schemas_with_stubs import climate_capnp
 from zalfmas_common import common
 from zalfmas_common import service as serv
+from zalfmas_common.climate import common_climate_data_capnp_impl as ccdi
 from zalfmas_common.climate import csv_file_based as csv_based
-import zalfmas_capnp_schemas
-
-sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
-import climate_capnp
 
 
 def create_meta_plus_datasets(

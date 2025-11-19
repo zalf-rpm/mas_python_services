@@ -14,24 +14,19 @@
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import asyncio
-import capnp
-import os
-from pathlib import Path
-from pyproj import CRS
 import sqlite3
-import sys
 
 # import time
 import uuid
-from zalfmas_common import common
-from zalfmas_common import service as serv
-from zalfmas_common import geo
-from zalfmas_common import rect_ascii_grid_management as grid_man
-from zalfmas_common.soil import soil_io
-import zalfmas_capnp_schemas
+from pathlib import Path
 
-sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
-import soil_capnp
+import capnp
+from pyproj import CRS
+from zalfmas_capnp_schemas_with_stubs import soil_capnp
+from zalfmas_common import common, geo
+from zalfmas_common import rect_ascii_grid_management as grid_man
+from zalfmas_common import service as serv
+from zalfmas_common.soil import soil_io
 
 
 def set_capnp_prop_name_via_monica_name(param, name, value=None):

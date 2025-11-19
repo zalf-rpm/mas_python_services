@@ -14,21 +14,15 @@
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import asyncio
-import capnp
 import math
-import os
-from pyproj import CRS, Transformer
-import sys
 import uuid
 
-from zalfmas_common import common
-from zalfmas_common import service as serv
-from zalfmas_common import geo
+import capnp
+from pyproj import CRS, Transformer
+from zalfmas_capnp_schemas_with_stubs import grid_capnp
+from zalfmas_common import common, geo
 from zalfmas_common import rect_ascii_grid_management as grid_man
-import zalfmas_capnp_schemas
-
-sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
-import grid_capnp
+from zalfmas_common import service as serv
 
 
 class RectMeterGrid(

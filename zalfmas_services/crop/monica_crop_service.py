@@ -14,25 +14,20 @@
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import asyncio
-import capnp
-from collections import defaultdict
 import itertools
 import json
 import os
-from pathlib import Path
 import sys
 import uuid
+from collections import defaultdict
+from pathlib import Path
+
+import capnp
+from zalfmas_capnp_schemas_with_stubs import crop_capnp
+from zalfmas_capnp_schemas_with_stubs import registry_capnp as reg_capnp
+from zalfmas_capnp_schemas_with_stubs.model.monica import monica_params_capnp
 from zalfmas_common import common
 from zalfmas_common import service as serv
-import zalfmas_capnp_schemas
-
-capnp_path = Path(os.path.dirname(zalfmas_capnp_schemas.__file__))
-sys.path.append(str(capnp_path))
-import registry_capnp as reg_capnp
-import crop_capnp
-
-sys.path.append(str(capnp_path / "model" / "monica"))
-import monica_params_capnp
 
 LAST_SERVICE_SR_KEY_NAME = "last_service_sr"
 LAST_ADMIN_SR_KEY_NAME = "last_admin_sr"
