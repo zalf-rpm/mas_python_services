@@ -3,7 +3,7 @@ name = "zalfmas-services"
 version = "0.1.16"
 description = ""
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.12,<3.14"
 authors = [{ name = "Michael Berg-Mohnicke", email = "michael.berg@zalf.de" }]
 dependencies = [
   "pycapnp(>=2.1.0)",
@@ -27,3 +27,15 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.14.0"
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[tool.pixi.pypi-dependencies]
+zalfmas-services = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+libsodium = ">=1.0.22,<2"

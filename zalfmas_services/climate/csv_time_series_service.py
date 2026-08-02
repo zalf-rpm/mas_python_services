@@ -14,16 +14,15 @@
 # Copyright (C: Leibniz Centre for Agricultural Landscape Research (ZALF)
 
 import asyncio
-import capnp
 import json
 import os
 import sys
+
+import capnp
+from zalfmas_capnp_schemas_with_stubs import climate_capnp
 from zalfmas_common import common
 from zalfmas_common import service as serv
 from zalfmas_common.climate import csv_file_based as csv_based
-import zalfmas_capnp_schemas
-
-sys.path.append(os.path.dirname(zalfmas_capnp_schemas.__file__))
 
 
 async def main(
@@ -47,7 +46,7 @@ async def main(
         "serve_bootstrap": serve_bootstrap,
         "srt": srt,
         "csv_separator": ",",
-        "csv_skip_rows": 0,
+        "csv_skip_rows": "0",
         "csv_decimal": ".",
         "csv_thousands": None,
     }
